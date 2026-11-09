@@ -1,0 +1,67 @@
+name: 버그 · Bug
+description: 안 열리거나, 멈추거나, 이상하게 보일 때 · Something won't open, freezes, or looks wrong
+title: "[버그] "
+labels: ["버그 · bug", "검토 중 · triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        보안이나 개인정보 문제(예: 손님에게만 보여야 할 것이 누구에게나 보임)는 여기 말고 **Security → Report a vulnerability**로 비공개로 알려 주세요.
+        Security or privacy problems go to **Security → Report a vulnerability**, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: 무슨 일이 있었나요? · What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 다시 일어나게 하는 방법 · Steps to make it happen again
+      placeholder: |
+        1. 걷기 화면을 열고 · Open the walk page
+        2. 2층 지도에서 · On the 2F map
+        3. ...
+  - type: textarea
+    id: expected
+    attributes:
+      label: 원래 어떻게 되어야 했나요? · What did you expect?
+  - type: dropdown
+    id: device
+    attributes:
+      label: 기기 · Device
+      options:
+        - iPhone
+        - iPad
+        - Android 휴대폰 · Android phone
+        - Mac
+        - Windows
+        - 기타 · Other
+    validations:
+      required: true
+  - type: dropdown
+    id: browser
+    attributes:
+      label: 브라우저 · Browser
+      options:
+        - Safari
+        - Chrome
+        - 삼성 인터넷 · Samsung Internet
+        - 카카오톡 안 브라우저 · KakaoTalk in-app browser
+        - Edge
+        - Firefox
+        - 기타 · Other
+    validations:
+      required: true
+  - type: textarea
+    id: shot
+    attributes:
+      label: 화면 사진 (선택) · Screenshot (optional)
+      description: 이름표, 얼굴, 내 갤러리 사진은 잘라 내고 올려 주세요 · Please crop out name tags, faces, and gallery photos
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 개인정보 확인 · Privacy check
+      options:
+        - label: 실명, 주소·동네, 집 사진, 아이 사진, 다른 사람의 개인정보를 넣지 않았어요 · I didn't include real names, an address or neighbourhood, house photos, children's photos, or anyone's personal info
+          required: true

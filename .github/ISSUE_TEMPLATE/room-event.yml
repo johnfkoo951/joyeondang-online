@@ -1,0 +1,50 @@
+name: 방·이벤트 아이디어 · Room or event idea
+description: 방 하나의 분위기와 소품, 또는 날짜가 있는 이벤트 · A room's mood and props, or a dated event
+title: "[방·이벤트] "
+labels: ["검토 중 · triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        방은 데이터로 정해진 작은 장면이고, 이벤트는 장식과 작은 퀘스트, 도장을 묶은 거예요. 어느 방이 누구 방인지는 공개하지 않아요.
+        A room is a small scene defined as data; an event is decorations, a small quest and a stamp. Which room belongs to whom stays private.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 무엇인가요? · What is it?
+      options:
+        - 방 꾸미기 · A room
+        - 이벤트 · An event
+    validations:
+      required: true
+  - type: textarea
+    id: mood
+    attributes:
+      label: 분위기 · Mood
+      description: 한두 문장으로 · In a sentence or two
+      placeholder: 예) 비 오는 오후의 작은 재즈 바 · e.g. A small jazz bar on a rainy afternoon
+    validations:
+      required: true
+  - type: textarea
+    id: props
+    attributes:
+      label: 핵심 소품 3~5개와 색 · 3–5 key props and colors
+    validations:
+      required: true
+  - type: textarea
+    id: do
+    attributes:
+      label: 손님이 하는 일 · What guests do there
+      description: 살펴볼 자리, 놀이, 쪽지, 도장 등 · Spots to inspect, a game, a note, a stamp
+  - type: input
+    id: when
+    attributes:
+      label: (이벤트라면) 언제 · (For events) When
+      placeholder: 예) 12월 한 달 · e.g. All of December
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 개인정보 확인 · Privacy check
+      options:
+        - label: 실명, 주소·동네, 집 사진, 아이 사진, 다른 사람의 개인정보를 넣지 않았어요 · I didn't include real names, an address or neighbourhood, house photos, children's photos, or anyone's personal info
+          required: true

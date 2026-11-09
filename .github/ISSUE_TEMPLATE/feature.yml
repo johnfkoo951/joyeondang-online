@@ -1,0 +1,49 @@
+name: 기능 제안 · Feature idea
+description: 새 놀이, 캐릭터 소품, 걷기·조작 개선 같은 아이디어 · A new game, character item, or a better way to walk around
+title: "[제안] "
+labels: ["제안 · feature", "검토 중 · triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        고마워요! 이슈 하나에 아이디어 하나만 적어 주세요. 먼저 [집이 자라는 법](https://github.com/johnfkoo951/joyeondang-ideas/blob/main/docs/how-it-grows.md)을 보면 좋아요.
+        Thank you! One idea per issue, please. [How the house grows](https://github.com/johnfkoo951/joyeondang-ideas/blob/main/docs/how-it-grows.md) explains what fits.
+  - type: dropdown
+    id: area
+    attributes:
+      label: 어느 갈래인가요? · Which area?
+      options:
+        - 놀이 · Mini-game
+        - 캐릭터 소품 · Character item
+        - 걷기·조작 · Walking and controls
+        - 함께 걷기 · Walking together
+        - 갤러리·쪽지 · Gallery and notes
+        - 기타 · Something else
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: 아이디어 · The idea
+      description: 무엇을, 어디서, 어떻게 하는지 · What it is, where in the house, how it works
+      placeholder: 예) 마당에서 다 같이 단체 사진을 찍는 사진관 · e.g. A photo booth in the yard for group pictures
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: 누가, 왜 좋아할까요? · Who would enjoy it, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: kids
+    attributes:
+      label: 어린아이도 즐길 수 있나요? · Can a small child enjoy it too?
+      description: 글을 아직 못 읽는 아이도 할 수 있는 방법이 있다면 적어 주세요 · How it works for a child who can't read yet
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: 개인정보 확인 · Privacy check
+      options:
+        - label: 실명, 주소·동네, 집 사진, 아이 사진, 다른 사람의 개인정보를 넣지 않았어요 · I didn't include real names, an address or neighbourhood, house photos, children's photos, or anyone's personal info
+          required: true

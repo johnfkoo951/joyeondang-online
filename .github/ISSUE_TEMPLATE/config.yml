@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 토론 · Discussions
+    url: https://github.com/johnfkoo951/joyeondang-ideas/discussions
+    about: 크거나 아직 흐릿한 생각, 질문 · Big or fuzzy ideas and questions
+  - name: 보안·개인정보 신고 · Report a security or privacy problem
+    url: https://github.com/johnfkoo951/joyeondang-ideas/security/advisories/new
+    about: 공개 이슈 말고 비공개로 알려 주세요 · Report privately, not in a public issue
+  - name: 조연당 온라인 · Joyeondang Online
+    url: https://joyeondang.cmdspace.work
+    about: 집을 걸어 보세요 · Walk the house
