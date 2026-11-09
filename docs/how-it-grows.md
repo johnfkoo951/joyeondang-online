@@ -4,7 +4,7 @@
 
 ## English
 
-Joyeondang Online grows in four ways. A good proposal says which one it belongs to.
+Joyeondang Online grows in four ways. A good proposal says which one it belongs to. The code contracts behind each are in [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 | Area | What it is | What a proposal needs |
 |---|---|---|
@@ -23,7 +23,7 @@ Joyeondang Online grows in four ways. A good proposal says which one it belongs 
 
 ## 한국어
 
-조연당 온라인은 네 갈래로 자라요. 좋은 제안은 어느 갈래인지 함께 말해 줘요.
+조연당 온라인은 네 갈래로 자라요. 좋은 제안은 어느 갈래인지 함께 말해 줘요. 갈래마다의 코드 규약은 [ARCHITECTURE.md](../ARCHITECTURE.md)에 있어요.
 
 | 갈래 | 무엇인가 | 제안에 필요한 것 |
 |---|---|---|

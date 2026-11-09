@@ -1,50 +1,66 @@
-# Joyeondang Online · Ideas
+# Joyeondang Online
 
-[![English](https://img.shields.io/badge/lang-English-134538)](README.md)
-[![한국어](https://img.shields.io/badge/lang-한국어-E985A2)](README.ko.md)
+[🇬🇧 English](README.md) · [🇰🇷 한국어](README.ko.md)
 
-Ideas, feedback and event proposals for **[Joyeondang Online](https://joyeondang.cmdspace.work)**, a small online house where invited guests walk through a cozy 3D home, step into rooms, play short games, and leave notes for the family who lives there.
+[![Code: MIT](https://img.shields.io/badge/code-MIT-134538)](LICENSE)
+[![Content: CC BY-NC 4.0](https://img.shields.io/badge/content-CC%20BY--NC%204.0-E985A2)](LICENSE-content)
+[![Site](https://img.shields.io/badge/walk%20the%20house-joyeondang.cmdspace.work-134538)](https://joyeondang.cmdspace.work)
 
-This repository holds **no source code**. It is the front door for suggestions: rooms, mini-games, events, character items, accessibility, and bugs.
+A small 3D house you can walk through with friends. A family built it to welcome guests: walk the rooms, play little games, dress up a character, take a picture, leave a note. This is the code behind **[joyeondang.cmdspace.work](https://joyeondang.cmdspace.work)**.
 
-## What you can suggest
+## What's inside
 
-| Area | Examples |
-|---|---|
-| Rooms | A theme for a room, props, cozy details, a small surprise behind a door |
-| Mini-games | Short, kind games (under about two minutes) that kids and grown-ups can both play |
-| Events | Seasonal or anniversary happenings in the house: decorations, a small quest, a stamp |
-| Character items | Hair styles, outfits, accessories for the dress-up panel |
-| Accessibility & mobile | Anything that is hard to see, read, reach, or tap |
-| Bugs | Something that broke, with your device and browser |
+| Part | Where | Built with |
+|---|---|---|
+| Walk engine: first and third person, physics, minimap, find-your-way, room scenes | `src/walk/` | three.js |
+| Mini-games, each a lazy-loaded "cartridge" | `src/games/` | React, Canvas, Web Audio |
+| The house, rooms and room scenes as data | `src/content/` | TypeScript |
+| Site: pages, login, notes, gallery, character studio, admin | `src/app/`, `src/components/` | Next.js 16 (App Router, Cache Components), React 19 |
+| Data and permissions | `supabase/migrations/` | Supabase Postgres with row-level security |
+| Walking together: names and speech bubbles | `game-server/` | Cloudflare Workers and Durable Objects |
+| Photo-to-character queue and worker | `worker/avatar/` | Node, an OpenAI-compatible image API |
 
-## How to suggest
+[ARCHITECTURE.md](ARCHITECTURE.md) explains how the parts fit and the contracts for games, rooms and characters.
 
-1. Search the [open issues](../../issues) first. Add a 👍 if your idea is already there.
-2. Open a new issue with one of the forms: **Feature**, **Room or event idea**, or **Bug**.
-3. For open-ended ideas or questions, start a [Discussion](../../discussions).
+## Quick start
 
-The family who lives in the house decides what gets built. The CMDSPACE team builds it. Code contributions are not accepted for now; ideas are.
+Needs Node 22.
 
-## Please don't post
+```bash
+npm ci
+npm run dev        # http://localhost:3000/walk
+npm test           # unit tests and SQL tests (in-memory Postgres via PGlite)
+npm run verify     # privacy gate, then a production build
+```
 
-- Real names of the family or of any children
-- The house's address, neighborhood, or anything that shows where it is
-- Photos of the house, of children, or of anyone who has not agreed to be shown
-- Anyone's personal information (phone numbers, emails, accounts)
+With no keys at all, the site runs and the redrawn house is open to everyone. Login, notes, the guest list, walking together and photo characters need the services below.
 
-Found a security or privacy problem? Please **do not** open a public issue. Use **Security → Report a vulnerability** to tell us privately ([SECURITY.md](SECURITY.md)).
+## Deploy your own
 
-## More
+1. **Supabase**: create a project, run `supabase/migrations/*.sql` in order, turn on Google login, and copy the URL and publishable key into `.env.local` (see `.env.example`).
+2. **Vercel** or any Next.js host: set the same variables. Server-only and optional: `SUPABASE_SECRET_KEY`, `HOUSE_WORLD_GZ` (a real-scale house shown only to invited guests), `FAMILY_ROOMS_JSON` (name tags on room doors).
+3. **Game server** (optional): in `game-server/`, run `npx wrangler secret put GAME_TOKEN_SECRET`, set `ALLOWED_ORIGINS` and your own route in `wrangler.jsonc`, then `npx wrangler deploy`. Give the site `GAME_SERVER_URL` and the same `GAME_TOKEN_SECRET`.
+4. **Photo characters** (optional): see [worker/avatar/README.md](worker/avatar/README.md). Off unless `AVATAR_ENABLED=1`. Characters are always drawn kindly.
 
-- [ROADMAP.md](ROADMAP.md): what is live, what is next
-- [docs/how-it-grows.md](docs/how-it-grows.md): the four ways the house grows (rooms, games, events, character items) and the principles every idea is checked against
-- [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+## Privacy gate
+
+A family site holds things that must never ship: names, places, the real floor plan. `npm run verify` scans the source and the built pages and fails the build on a hit. This repository carries only the general rules (key formats, real measurements, compass directions, position names). Put your own family's words in `private/privacy-rules.mjs`, which git ignores. Start from [private.example/](private.example/).
+
+## Ideas, bugs and contributions
+
+- **Ideas and bugs**: open an [issue](https://github.com/johnfkoo951/joyeondang-online/issues/new/choose) with a form, or start a [discussion](https://github.com/johnfkoo951/joyeondang-online/discussions).
+- **Pull requests are not accepted for now.** The family writes the code. You're welcome to fork it under the MIT license.
+- **Security or privacy problems**: report privately, see [SECURITY.md](SECURITY.md).
+
+[ROADMAP.md](ROADMAP.md) · [docs/how-it-grows.md](docs/how-it-grows.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
+## How this repository is updated
+
+The code is developed in a private repository that also holds the family's data. At each release a script exports everything except the private parts, checks it for personal data and secrets, installs, tests and builds it with no keys, and publishes it here as one commit with release notes. So the history here starts at the first public release, and each commit is a release.
 
 ## License
 
-Text in this repository is licensed under [CC BY-NC 4.0](LICENSE).
-
----
+- Code: [MIT](LICENSE)
+- The house layout, room scenes, words and pictures in `src/content/` and `docs/`: [CC BY-NC 4.0](LICENSE-content)
 
 Made by **Yohan Koo (CMDSPACE)** · [cmdspace.work](https://cmdspace.work)

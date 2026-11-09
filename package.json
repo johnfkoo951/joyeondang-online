@@ -1,0 +1,39 @@
+{
+  "name": "joyeondang-online",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --env-file-if-exists=private/test.env --test \"tests/**/*.test.ts\" \"tests/**/*.test.mjs\" \"private/tests/**/*.test.mjs\"",
+    "privacy": "node tools/privacy-gate.mjs",
+    "verify": "node tools/privacy-gate.mjs && next build && node tools/privacy-gate.mjs --build"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.0",
+    "marked": "18.1.3",
+    "next": "16.4.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "0.187.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

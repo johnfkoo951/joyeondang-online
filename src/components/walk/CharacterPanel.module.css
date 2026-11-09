@@ -1,0 +1,57 @@
+/* 캐릭터 꾸미기 패널(.walk-panel 위에 얹는다). 색은 사이트 토큰만 */
+.panel { width: min(100% - 32px, 620px); }
+
+.tabs { display: flex; gap: 6px; }
+.tab, .tabOn {
+  font: inherit; font-weight: 700; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--ink);
+}
+.tabOn { background: var(--pine); color: var(--pine-on); border-color: var(--pine); }
+.tab:focus-visible, .tabOn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.dollTab { display: grid; grid-template-columns: 180px 1fr; gap: 14px; align-items: start; }
+.previewBox { display: grid; gap: 8px; justify-items: center; position: sticky; top: 0; }
+.preview {
+  width: 180px; height: 220px; border-radius: 14px; overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, var(--season-soft), var(--paper) 75%); border: 1px solid var(--line);
+}
+.previewCanvas { display: block; width: 100%; height: 100%; }
+.choices { display: grid; gap: 10px; }
+
+.group { margin: 0; padding: 0; border: 0; min-width: 0; }
+.legend { padding: 0; margin-bottom: 6px; font-weight: 700; font-size: 0.94em; }
+.options { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.radio { position: absolute; opacity: 0; width: 1px; height: 1px; margin: 0; pointer-events: none; }
+.chip { position: relative; cursor: pointer; }
+.chipText {
+  display: inline-block; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 0.94em;
+}
+.chip .radio:checked + .chipText { background: var(--pine); color: var(--pine-on); border-color: var(--pine); }
+.chip .radio:focus-visible + .chipText { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+.swatchLabel { position: relative; cursor: pointer; display: inline-grid; }
+.swatch {
+  width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--line);
+  box-shadow: inset 0 0 0 2px var(--paper);
+}
+.swatchLabel .radio:checked + .swatch { border-color: var(--ink); box-shadow: inset 0 0 0 3px var(--paper), 0 0 0 2px var(--ink); }
+.swatchLabel .radio:focus-visible + .swatch { outline: 3px solid var(--focus); outline-offset: 3px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.photoTab, .form { display: grid; gap: 10px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.status { font-weight: 700; color: var(--pine); }
+.consent { padding: 10px 12px; border-radius: 12px; background: var(--season-soft); line-height: 1.55; }
+.file { display: grid; gap: 4px; font-weight: 700; }
+.file input { font: inherit; font-weight: 400; }
+.check { display: flex; gap: 8px; align-items: flex-start; line-height: 1.45; cursor: pointer; }
+.check input { margin-top: 3px; width: 18px; height: 18px; flex: none; accent-color: var(--pine); }
+.fine { color: var(--ink-2); }
+.error { color: var(--warn); font-weight: 700; }
+
+@media (max-width: 560px) {
+  .dollTab { grid-template-columns: 1fr; }
+  .previewBox { position: static; grid-template-columns: 120px auto; align-items: end; justify-items: start; }
+  .preview { width: 120px; height: 146px; }
+}

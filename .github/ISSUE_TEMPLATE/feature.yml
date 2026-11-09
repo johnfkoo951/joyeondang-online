@@ -6,8 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        고마워요! 이슈 하나에 아이디어 하나만 적어 주세요. 먼저 [집이 자라는 법](https://github.com/johnfkoo951/joyeondang-ideas/blob/main/docs/how-it-grows.md)을 보면 좋아요.
-        Thank you! One idea per issue, please. [How the house grows](https://github.com/johnfkoo951/joyeondang-ideas/blob/main/docs/how-it-grows.md) explains what fits.
+        고마워요! 이슈 하나에 아이디어 하나만 적어 주세요. 먼저 [집이 자라는 법](https://github.com/johnfkoo951/joyeondang-online/blob/main/docs/how-it-grows.md)을 보면 좋아요.
+        Thank you! One idea per issue, please. [How the house grows](https://github.com/johnfkoo951/joyeondang-online/blob/main/docs/how-it-grows.md) explains what fits.
   - type: dropdown
     id: area
     attributes:

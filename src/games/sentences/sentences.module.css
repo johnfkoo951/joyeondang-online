@@ -1,0 +1,490 @@
+/* 문장 걸어 두기. 색은 사이트 토큰(globals.css)만 읽는다. 이 파일 밖으로 새는 규칙 없음 */
+.root {
+  position: relative;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper-2);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text, 17px);
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+  --sun: color-mix(in srgb, var(--lamp) 26%, transparent);
+  --shadow: color-mix(in srgb, var(--ink) 18%, transparent);
+}
+.root[data-theme='dark'] {
+  --sun: color-mix(in srgb, var(--lamp) 12%, transparent);
+  --shadow: color-mix(in srgb, var(--paper) 85%, transparent);
+}
+.root *,
+.root *::before,
+.root *::after {
+  box-sizing: border-box;
+}
+.root a {
+  color: var(--pine);
+  text-underline-offset: 3px;
+}
+.root :focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* 창살 빛 무늬: 창 하나가 벽에 비스듬히 드리운 모양(움직임 줄이기면 멈춘다) */
+.light {
+  position: absolute;
+  top: 40px;
+  right: -6%;
+  width: min(760px, 78%);
+  height: 560px;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 128px, var(--paper-2) 128px 138px),
+    repeating-linear-gradient(90deg, var(--sun) 0 118px, transparent 118px 128px);
+  transform: skewX(-24deg) rotate(4deg);
+  filter: blur(1.5px);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 45%, black 40%, transparent 100%);
+  animation: drift 40s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { translate: 0 0; }
+  to { translate: 60px 0; }
+}
+.root[data-reduced] .light {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .light { animation: none; }
+}
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px max(12px, env(safe-area-inset-left)) 10px max(12px, env(safe-area-inset-right));
+  background: color-mix(in srgb, var(--paper-2) 88%, transparent);
+  backdrop-filter: blur(6px);
+}
+.grow { flex: 1; }
+.hello {
+  color: var(--ink-2);
+  font-size: 0.9em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip,
+.btn,
+.btnMain,
+.round {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.chip { min-width: 44px; padding: 0 12px; }
+.chip[aria-pressed='true'] { border-color: var(--pine); }
+.btnMain {
+  border-color: var(--roof);
+  background: var(--roof);
+  color: var(--roof-on);
+  font-weight: 600;
+}
+.btn:disabled,
+.btnMain:disabled,
+.round:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.main {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  margin: 0 auto;
+  padding: 8px 16px calc(32px + env(safe-area-inset-bottom));
+}
+.title {
+  margin: 8px 0 4px;
+  font-size: 1.35em;
+  line-height: 1.3;
+}
+.title:focus { outline: none; }
+.lead {
+  margin: 0 0 16px;
+  color: var(--ink-2);
+}
+.small {
+  color: var(--ink-3);
+  font-size: 0.85em;
+}
+.warn {
+  margin: 0;
+  color: var(--warn);
+  font-size: 0.92em;
+}
+.badge {
+  display: inline-block;
+  padding: 1px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 0.8em;
+}
+
+.cheer {
+  position: relative;
+  z-index: 2;
+  width: min(760px, calc(100% - 32px));
+  margin: 8px auto 0;
+  padding: 12px 16px;
+  border: 1px solid var(--lamp);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--lamp) 18%, var(--paper));
+}
+.cheer p { margin: 0 0 10px; }
+
+/* 첫 화면 */
+.picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 168px;
+  padding: 18px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 6px 18px var(--shadow);
+  touch-action: manipulation;
+}
+.pick svg { color: var(--roof); }
+.pickName { font-size: 1.15em; font-weight: 700; }
+.pickNote { color: var(--ink-2); font-size: 0.88em; }
+
+/* 읽기 벽 */
+.line {
+  height: 22px;
+  margin: 4px -8px -10px;
+  border-bottom: 2px solid var(--ink-3);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}
+.paper {
+  position: relative;
+  width: min(560px, 100%);
+  min-height: 220px;
+  margin: 0 auto;
+  padding: 34px 26px 20px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in srgb, var(--line) 60%, transparent) 31px 32px),
+    var(--paper);
+  box-shadow: 0 10px 26px var(--shadow);
+  transform-origin: 50% 0;
+  animation: swing 0.6s ease-out;
+  touch-action: pan-y;
+  user-select: none;
+}
+@keyframes swing {
+  0% { rotate: 4deg; }
+  45% { rotate: -2deg; }
+  75% { rotate: 1deg; }
+  100% { rotate: 0deg; }
+}
+.root[data-reduced] .paper { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .paper { animation: none; }
+}
+.pin {
+  position: absolute;
+  top: -12px;
+  width: 12px;
+  height: 30px;
+  border-radius: 3px;
+  background: var(--oak);
+  box-shadow: 0 2px 4px var(--shadow);
+}
+.pin[data-side='l'] { left: 22%; rotate: -4deg; }
+.pin[data-side='r'] { right: 22%; rotate: 5deg; }
+.paperText {
+  margin: 0 0 16px;
+  font-size: 1.2em;
+  line-height: 32px;
+  white-space: pre-line;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.paperSource {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 0.92em;
+}
+.paperMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+  color: var(--ink-3);
+  font-size: 0.85em;
+}
+.flip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 18px;
+}
+.round {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+}
+.count {
+  min-width: 64px;
+  color: var(--ink-2);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 옮겨 적기 */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 6px 18px var(--shadow);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field label { font-weight: 600; }
+/* 원고지 느낌: 32px 칸, 한글 한 자가 한 칸에 들도록 자간을 벌린다 */
+.grid {
+  width: 100%;
+  height: calc(32px * 5 + 2px);
+  min-height: calc(32px * 3 + 2px);
+  margin: 0;
+  padding: 0 0 0 6px;
+  border: 1px solid color-mix(in srgb, var(--roof) 55%, var(--line-2));
+  border-radius: 4px;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--roof) 30%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--roof) 22%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-attachment: local;
+  color: var(--ink);
+  font: inherit;
+  font-size: 20px;
+  line-height: 32px;
+  letter-spacing: 12px;
+  resize: vertical;
+}
+.input {
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.counter,
+.countWarn {
+  align-self: flex-end;
+  color: var(--ink-3);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+}
+.countWarn { color: var(--warn); }
+.scope {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.scope legend { padding: 0 4px; font-weight: 600; }
+.choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 40px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.choice input {
+  width: 20px;
+  height: 20px;
+  margin: 3px 0 0;
+  flex: none;
+  accent-color: var(--roof);
+}
+.notice,
+.done {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.notice p,
+.done p { margin: 0; }
+.done svg { color: var(--pine); }
+.code {
+  font-size: 1.15em;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 빛 무늬 퍼즐 */
+.stage {
+  margin-left: 6px;
+  color: var(--ink-3);
+  font-size: 0.7em;
+  font-weight: 500;
+}
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 84px;
+  margin: 16px 0 0;
+  padding: 14px;
+  list-style: none;
+  border-radius: var(--radius);
+  background:
+    repeating-linear-gradient(115deg, transparent 0 70px, color-mix(in srgb, var(--paper) 55%, transparent) 70px 78px),
+    color-mix(in srgb, var(--lamp) 22%, var(--paper));
+  border: 1px dashed color-mix(in srgb, var(--lamp) 60%, var(--line-2));
+}
+.slot { display: flex; }
+.empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  min-height: 52px;
+  padding: 0 12px;
+  border: 2px dashed var(--line-2);
+  border-radius: 10px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.pool {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.piece {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 52px;
+  max-width: 100%;
+  padding: 8px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  background-color: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.05em;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  box-shadow: 0 3px 10px var(--shadow);
+  touch-action: manipulation;
+}
+.piece[data-placed] { box-shadow: none; }
+.piece > span:last-child {
+  padding: 0 4px;
+  border-radius: 4px;
+}
+/* 그림 힌트: 해가 왼쪽에 있고 창살이 드리운 띠 한 장을 조각 수만큼 잘라 나눠 준다 */
+.puzzle[data-hint] .piece {
+  border-color: color-mix(in srgb, var(--lamp) 70%, var(--line-2));
+  background-image:
+    radial-gradient(circle 16px at calc(72% / var(--n)) 14px, var(--lamp) 0 11px, transparent 13px),
+    repeating-linear-gradient(90deg, transparent 0 7%, color-mix(in srgb, var(--oak) 55%, transparent) 7% 8%),
+    linear-gradient(90deg, color-mix(in srgb, var(--lamp) 55%, var(--paper)), color-mix(in srgb, var(--season) 40%, var(--paper)));
+  background-size: calc(var(--n) * 100%) 100%;
+  background-position: var(--p) 0;
+}
+.puzzle[data-hint] .piece > span:last-child {
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+}
+.dots {
+  color: var(--roof);
+  font-size: 0.7em;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.status {
+  min-height: 1.6em;
+  margin: 12px 0 4px;
+  color: var(--ink-2);
+}
+.solved {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 6px 18px var(--shadow);
+}
+.solved .row { margin-top: 12px; }
+
+@media (max-width: 480px) {
+  .main { padding-inline: 12px; }
+  .paper { padding: 30px 18px 16px; }
+  .paperText { font-size: 1.1em; }
+  .pick { min-height: 132px; }
+  .form { padding: 14px; }
+}

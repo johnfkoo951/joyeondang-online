@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>work.cmdspace.joyeondang-avatar-worker</string>
+	<!-- 조연당 온라인 AI 사진 캐릭터 그리기 일꾼(Mac Studio). 늘 떠 있고, 죽으면 launchd가 다시 띄운다.
+	     __REPO_DIR__: 이 저장소를 받아 npm ci 한 폴더, __NODE__: node 22.18 이상 절대 경로,
+	     __SUPABASE_URL__: 운영 Supabase 주소. 키 값은 이 파일에 넣지 않고 권한 600 파일 경로만 적는다. -->
+	<key>ProgramArguments</key>
+	<array>
+		<string>__NODE__</string>
+		<string>--disable-warning=MODULE_TYPELESS_PACKAGE_JSON</string>
+		<string>worker/avatar/worker.mjs</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>__REPO_DIR__</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>SUPABASE_URL</key>
+		<string>__SUPABASE_URL__</string>
+		<key>SUPABASE_SECRET_KEY_FILE</key>
+		<string>__REPO_DIR__/worker/avatar/secrets/supabase-secret.env</string>
+		<key>PROXY_BASE_URL</key>
+		<string>http://127.0.0.1:28317/v1</string>
+		<key>PROXY_API_KEY_FILE</key>
+		<string>__PROXY_KEY_FILE__</string>
+		<key>PROXY_API_KEY_NAME</key>
+		<string>OPENAI_API_KEY</string>
+		<key>AVATAR_WORKER_ID</key>
+		<string>studio-1</string>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<!-- 너무 빨리 죽고 다시 뜨는 것을 막는다(키 파일이 없을 때 등) -->
+	<key>ThrottleInterval</key>
+	<integer>60</integer>
+	<key>StandardOutPath</key>
+	<string>__REPO_DIR__/worker/avatar/logs/worker.out.log</string>
+	<key>StandardErrorPath</key>
+	<string>__REPO_DIR__/worker/avatar/logs/worker.err.log</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+</dict>
+</plist>

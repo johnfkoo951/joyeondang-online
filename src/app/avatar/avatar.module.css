@@ -1,0 +1,106 @@
+/* 내 캐릭터 만들기 화면. 색은 globals.css의 종이·잉크 토큰만 쓴다(밤 모드도 그대로 따라간다). */
+
+.consent {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.consentText { margin: 0 0 4px; color: var(--ink-2); line-height: 1.75; }
+
+.pickRow { display: flex; flex-wrap: wrap; gap: 10px; }
+.pick { position: relative; }
+.pick[data-disabled] { opacity: 0.55; cursor: not-allowed; }
+.pick:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* 화면에서는 숨기지만 Tab으로 닿고 Space·Enter로 열린다 */
+.fileInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: inherit;
+}
+.fileInput::file-selector-button { cursor: inherit; }
+/* 「지금 찍기」는 손가락으로 쓰는 기기(휴대폰·태블릿)에서만 */
+.cameraOnly { display: none; }
+@media (pointer: coarse) {
+  .cameraOnly { display: inline-flex; }
+}
+
+.previewRow { display: flex; gap: 14px; align-items: center; }
+.preview {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  flex: none;
+}
+
+.progress { display: grid; gap: 8px; }
+.bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--roof);
+  transition: width 0.5s ease;
+}
+
+/* 그림이 놓이는 부드러운 종이 */
+.paper {
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--season-soft) 70%, transparent) 0 42%, transparent 70%),
+    linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  overflow: hidden;
+}
+.result {
+  display: block;
+  width: min(100%, 320px);
+  aspect-ratio: 2 / 3;
+  height: auto;
+  object-fit: contain;
+}
+.gone { aspect-ratio: 2 / 3; padding: 16px; text-align: center; }
+
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+}
+.card[data-active] { border-color: var(--pine); box-shadow: 0 0 0 2px var(--pine); }
+.thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  height: auto;
+  object-fit: contain;
+}
+.cardMeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cardActions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar span { transition: none; }
+}
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .previewRow { align-items: flex-start; }
+}
