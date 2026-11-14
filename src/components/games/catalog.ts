@@ -12,8 +12,8 @@ export const GAME_CATALOG: readonly { id: string; category: Exclude<Category, 'a
   {
     id: 'sword',
     category: 'action',
-    how: 'GitHub 레포와 실시간 연동되는 3D 보스 레이드 RPG! 방 코드 7794로 2인 협동도 즐겨 보세요.',
-    howEn: 'Live-synced 3D boss raid RPG from GitHub! Enter room code 7794 on two devices for live 2P co-op.',
+    how: 'GitHub 레포와 실시간 연동되는 3D 보스 레이드 RPG! 50마리를 잡으면 황금 피리가 생기고, 피리를 불면 왕드래곤이 내려와요. 방 코드 7794로 2인 협동도 즐겨 보세요.',
+    howEn: 'Live-synced 3D boss raid RPG from GitHub! Defeat 50 monsters for the golden flute, then blow it to call down the King Dragon. Enter room code 7794 on two devices for live 2P co-op.',
   },
   {
     id: 'groove',

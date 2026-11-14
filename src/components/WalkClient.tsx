@@ -13,6 +13,7 @@ import { FONT_LINK_ID } from '@/lib/fonts';
 import type { CharacterLook } from '@/walk/look';
 import { findPath, pauseNav, prepareNav, type Destination, type NavPoint } from '@/walk/nav';
 import type { Season, View, WalkController, WalkState } from '@/walk/scene';
+import { pickSkyKept, type WalkSky } from '@/walk/sky';
 import { CharacterPanelLazy as CharacterPanel } from './walk/CharacterPanelLazy';
 import { isQuiet, setQuiet, subscribeQuiet, unreadCount } from './walk/chat-quiet';
 import { ChatButton, ChatInput, ChatLog, ChatQuietButton } from './walk/ChatBar';
@@ -57,6 +58,7 @@ import { InAppNote, useInApp } from './walk/WalkInApp';
 import { WalkLoading } from './walk/WalkLoading';
 import { WalkMenu, type MenuAction } from './walk/WalkMenu';
 import { ShotFlash, ShotToast } from './walk/WalkShot';
+import { SkyHint } from './walk/SkyHint';
 import { SocialLayer } from './walk/social/SocialLayer';
 import { WalkTools } from './walk/WalkTools';
 import { WayArrived, WayBanner, WayfindPanel, placeTitle, type WayTarget } from './walk/WayfindPanel';
@@ -81,6 +83,10 @@ type Props = {
   signedIn: boolean;
   /** 관리자(또는 이 맥의 미리보기): 지도 고르기로 실측 1층 시험 지도를 걸어 볼 수 있다(서버가 한 번 더 확인한다) */
   shellMap?: boolean;
+  /** 사이트 기본 하늘(서버 환경 변수 WALK_SKY). 주소에 ?sky= 를 붙이면 이 화면에서만 다른 하늘을 미리 본다 */
+  sky?: WalkSky;
+  /** 밤하늘 안내 앞에 붙이는 집주인의 한 줄(서버 환경 변수 WALK_SKY_NOTE). 없으면 기본 안내만 */
+  skyNote?: string;
 };
 
 type Onboard = 'off' | 'on' | 'leaving';
@@ -110,6 +116,8 @@ const LOST_WAIT_MS = 2500;
 const NAV_PREP_DELAY_MS = 1500;
 /** 걸어서 도착했다는 띠를 보여 두는 시간 */
 const ARRIVED_MS = 2500;
+/** 밤하늘이면 들어온 뒤 하늘을 올려다보라는 띠를 보여 두는 시간 */
+const SKY_HINT_MS = 9000;
 
 /**
  * 3D 안의 글씨(문패·표지판·현판)는 캔버스에 한 번 그려 굳힌다. 글꼴이 오기 전에 그리면 다른 글꼴로 굳으므로,
@@ -133,7 +141,7 @@ function fontsReady(sample: string, ms = 900): Promise<void> {
 
 // 3D 걷기 화면. three.js는 이 화면을 열 때만 따로 받아 온다(첫 화면을 가볍게).
 // 집 세계와 방 장면을 드나들고(useSpace), 길 찾기·놀이 덮개·함께 걷기를 얹는다.
-export function WalkClient({ doors, name, nickname, role, dollColor, lantern, canStamp, realHouse, together, look, signedIn, shellMap = false }: Props) {
+export function WalkClient({ doors, name, nickname, role, dollColor, lantern, canStamp, realHouse, together, look, signedIn, shellMap = false, sky = 'day', skyNote }: Props) {
   const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const host = useRef<HTMLDivElement>(null);
@@ -159,6 +167,16 @@ export function WalkClient({ doors, name, nickname, role, dollColor, lantern, ca
   /** 걸어가는 곳과 걸어서 닿은 곳(띠가 지금 말로 보인다) */
   const [going, setGoing] = useState<WayTarget | null>(null);
   const [arrived, setArrived] = useState<WayTarget | null>(null);
+  // 하늘: 사이트 기본값. 주소에 ?sky= 가 있으면 그 하늘이고 이 탭이 닫힐 때까지 기억한다(링크로 받은 밤하늘이 첫 화면을 다녀와도 남게).
+  // 들어올 때 한 번 정한다(안내는 준비된 뒤에만 그려 서버 그림과 어긋나지 않는다)
+  const [skyNow] = useState<WalkSky>(() => {
+    if (typeof window === 'undefined') return sky;
+    let store: Storage | null = null;
+    try { store = window.sessionStorage; } catch { /* 저장소를 막아 둔 브라우저는 주소만 본다 */ }
+    return pickSkyKept(sky, window.location.search, store);
+  });
+  /** 밤하늘 안내를 다 보여 주었는가(한 번만 잠깐) */
+  const [skyHintDone, setSkyHintDone] = useState(false);
   const [game, setGame] = useState<string | null>(null);
   const [chat, setChat] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -341,6 +359,7 @@ export function WalkClient({ doors, name, nickname, role, dollColor, lantern, ca
           onGalleryStale: () => galleryRefresh.current(),
           name: init.current.name,
           season,
+          sky: skyNow,
           reducedMotion: P.isStill(),
           coarse: P.isCoarse(),
           view: startView,
@@ -455,7 +474,7 @@ export function WalkClient({ doors, name, nickname, role, dollColor, lantern, ca
       nearRef.current = null;
       setNear(null);
     };
-  }, [world, setOnboard, dismissOnboard, takeArrive, attach, reveal]);
+  }, [world, setOnboard, dismissOnboard, takeArrive, attach, reveal, skyNow]);
 
   useEffect(() => {
     ctrl.current?.setPaused(panel);
@@ -558,6 +577,14 @@ export function WalkClient({ doors, name, nickname, role, dollColor, lantern, ca
     const t = window.setTimeout(() => setArrived(null), ARRIVED_MS);
     return () => window.clearTimeout(t);
   }, [arrived]);
+  // 밤하늘이면 들어온 뒤 잠깐 하늘을 올려다보라고 알린다(한 번만, 휴대폰 첫 시점에는 하늘이 거의 보이지 않는다).
+  // 보이는 동안만 센다: 처음 온 사람의 안내 카드, 창, 길 찾기 띠가 떠 있거나 방·실측 지도(별이 없다)에 있으면 기다린다
+  const skyHintOn = ready && skyNow !== 'day' && !skyHintDone && onboard === 'off' && !inRoom && world?.kind !== 'shell' && !panel && !going && !arrived;
+  useEffect(() => {
+    if (!skyHintOn) return;
+    const t = window.setTimeout(() => setSkyHintDone(true), SKY_HINT_MS);
+    return () => window.clearTimeout(t);
+  }, [skyHintOn]);
   // 도착 알림이 떠 있는 사이 패널을 열었으면 거둔다(닫은 뒤에, 또는 다른 곳으로 옮긴 뒤에 뒤늦게 다시 뜨지 않게)
   useEffect(() => {
     if (panel) queueMicrotask(() => setArrived(null));
@@ -843,6 +870,7 @@ export function WalkClient({ doors, name, nickname, role, dollColor, lantern, ca
       {ready && going && !panel ? <WayBanner to={going} onStop={stopGoing} /> : null}
       {ready ? <MakingChip hidden={panel || Boolean(game)} onOpen={openLook} wearing={wearing} /> : null}
       {ready && arrived && !going && !panel ? <WayArrived to={arrived} /> : null}
+      {skyHintOn ? <SkyHint note={skyNote} /> : null}
 
       {/* 시트가 떠 있으면 미니맵은 내려 둔다(가려져 보이지 않는데 혼자 계속 그리지 않게) */}
       {ready && world && !sheet ? (
@@ -878,7 +906,7 @@ export function WalkClient({ doors, name, nickname, role, dollColor, lantern, ca
         </div>
       ) : null}
       {ready && chat && canTalk && !panel ? <ChatInput coarse={coarse} quiet={quiet} onSend={net.say} onClose={() => setChat(false)} /> : null}
-      <SocialLayer enabled={together && world?.kind !== 'shell'} ready={ready} space={netSpace} place={P.placeName(place)} name={name} look={character.look} ctrl={ctrl} net={net} coarse={coarse} covered={panel || Boolean(game)} />
+      <SocialLayer enabled={together && world?.kind !== 'shell'} ready={ready} space={netSpace} place={P.placeName(place)} name={name} look={character.look} ctrl={ctrl} net={net} coarse={coarse} covered={panel || Boolean(game)} world={world} onJumpTo={jumpTo} onWalkTo={walkTo} />
 
       {status === 'loading' ? <WalkLoading /> : null}
       {status === 'error' ? (

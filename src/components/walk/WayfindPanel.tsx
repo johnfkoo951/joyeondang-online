@@ -53,11 +53,15 @@ function placesOf(world: HouseWorld): Destination[] {
   }
 }
 
-/** 갈 곳의 이름: 주인 이름(가족 방, 손님에게만)과 장소 이름(한국어 그대로. 보일 때 장소 이름 표로 옮긴다) */
-export type WayTarget = { owner: string | null; title: string };
+/**
+ * 갈 곳의 이름: 주인 이름(가족 방, 손님에게만)과 장소 이름(한국어 그대로. 보일 때 장소 이름 표로 옮긴다).
+ * person이면 접속자 목록에서 고른 사람 옆이고 title은 그 사람 이름이다(옮기지 않는다)
+ */
+export type WayTarget = { owner: string | null; title: string; person?: boolean };
 
 /** 손님이면 가족 방 문 이름 앞에 주인 이름을 붙인다 */
 export function placeTitle(d: Pick<Destination, 'kind' | 'slug' | 'title'>, family: Map<string, FamilyTag>): WayTarget {
+  if (d.kind === 'person') return { owner: null, title: d.title, person: true };
   const tag = d.kind === 'portal' && d.slug ? family.get(d.slug) : undefined;
   return { owner: tag?.owner ?? null, title: d.title };
 }
@@ -206,11 +210,15 @@ export function WayfindPanel({ world, from, family, onWalk, onJump, onClose, can
   );
 }
 
-/** 자동 걷기 중 띠: 「○○로 가는 중 · 멈추기」(영어 화면은 「Going to ○○ · Stop」) */
+/** 자동 걷기 중 띠: 「○○로 가는 중 · 멈추기」(영어 화면은 「Going to ○○ · Stop」). 사람에게 갈 때는 「○○ 옆으로 가는 중」 */
 export function WayBanner({ to, onStop }: { to: WayTarget; onStop: () => void }) {
   return (
     <div className="walk-way-banner">
-      <span role="status"><T ko={`${withRo(nameKo(to))} 가는 중`} en={<>Going to <WayName to={to} /></>} /></span>
+      <span role="status">
+        {to.person
+          ? <T ko={`${to.title} 옆으로 가는 중`} en={<>Going to <span lang="ko">{to.title}</span></>} />
+          : <T ko={`${withRo(nameKo(to))} 가는 중`} en={<>Going to <WayName to={to} /></>} />}
+      </span>
       <span aria-hidden="true">·</span>
       <button type="button" onClick={onStop}><T ko="멈추기" en="Stop" /></button>
     </div>
@@ -221,7 +229,11 @@ export function WayBanner({ to, onStop }: { to: WayTarget; onStop: () => void })
 export function WayArrived({ to }: { to: WayTarget }) {
   return (
     <div className="walk-way-banner walk-way-arrived">
-      <span role="status"><T ko={`${nameKo(to)}에 도착했어요`} en={<>Arrived at <WayName to={to} /></>} /></span>
+      <span role="status">
+        {to.person
+          ? <T ko={`${to.title} 옆에 도착했어요`} en={<>Arrived next to <span lang="ko">{to.title}</span></>} />
+          : <T ko={`${nameKo(to)}에 도착했어요`} en={<>Arrived at <WayName to={to} /></>} />}
+      </span>
     </div>
   );
 }

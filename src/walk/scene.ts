@@ -13,7 +13,7 @@ import {
 import { dollFromColor, type CharacterLook, type DollLook } from './look';
 import { bakeStatic } from './bake';
 import { HUNG, planDecor } from './decor';
-import { dressHouse, tileMat, vertexMat } from './dress';
+import { GLOW_POOL, dressHouse, tileMat, vertexMat } from './dress';
 import { buildFurniture, makeFurnitureMats } from './furnish';
 import { prepareEnvironmentModels } from './environment-models';
 import { dressGalleryFacade } from './gallery-facade';
@@ -26,6 +26,7 @@ import type { PetSpec } from './pet-spec';
 import { createPetView, type PetView } from './pet-view';
 import { blocked, clearLine, inRamp, levelOf, rampY, step, type Body } from './physics';
 import { buildScenery, lookFor, type Scenery } from './scenery';
+import { skyLook, type WalkSky } from './sky';
 import { ROOM_SHELLS, buildRoomVista } from './room-windows';
 import { createHotspotBeacons, pickGazedHotspot } from './gaze';
 import { stickTurn } from './stick';
@@ -91,6 +92,8 @@ export type WalkOptions = {
    * 부른다. 그리기 버퍼는 그 프레임에만 남으므로 받는 쪽이 그 자리에서(같은 작업 안에서) 옮겨 담는다
    */
   observe?: { onScreens: (drawn: readonly number[]) => void };
+  /** 하늘(sky.ts). 없으면 낮. 집 세계에만 쓰고 방 장면은 방마다 정한 창밖 세계를 그대로 둔다 */
+  sky?: WalkSky;
 };
 
 /** 미니맵 등이 매 프레임 읽는 몸 상태. pitch는 지금 시점의 값(1인칭 시선 높이, 3인칭 궤도 높이). */
@@ -352,16 +355,19 @@ export function createWalk(host: HTMLElement, opt: WalkOptions): WalkController 
   const roomShell = isRoom && W.room?.slug ? (ROOM_SHELLS[W.room.slug] ?? null) : null;
   const roomVista = isRoom ? buildRoomVista(W) : null;
   if (roomVista) { keep(roomVista); scene.add(roomVista.group); }
-  scene.background = keep(roomVista ? T.sky(roomVista.skyTop, roomVista.skyHorizon) : isRoom ? T.sky('#c9dcec', '#f1ead9') : T.sky('#a9c4dc', EXTERIOR.sky));
-  if (LOOK.fog) scene.fog = new THREE.Fog(EXTERIOR.sky, LOOK.fog[0], LOOK.fog[1]);
+  // 하늘 고르기: 집 세계에만(방 장면은 방마다 창밖 세계가 따로 있다). 낮이면 null이고 아래 값은 원래대로다
+  const SKY = isRoom ? null : skyLook(opt.sky ?? 'day');
+  scene.background = keep(roomVista ? T.sky(roomVista.skyTop, roomVista.skyHorizon) : isRoom ? T.sky('#c9dcec', '#f1ead9')
+    : SKY ? T.sky(SKY.background[0], SKY.background[1]) : T.sky('#a9c4dc', EXTERIOR.sky));
+  if (LOOK.fog) scene.fog = new THREE.Fog(SKY?.fog ?? EXTERIOR.sky, LOOK.fog[0], LOOK.fog[1]);
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.environmentIntensity = 0.65;
+  scene.environmentIntensity = SKY?.environment ?? 0.65;
 
   const camera = new THREE.PerspectiveCamera(70, 1, 0.08, LOOK.far);
 
   // ───────── 빛: 하늘빛(그림자 없음) + 해(그림자) + 가구 등(따뜻한 점광). 방 장면은 해 없이 실내 조명만
-  scene.add(new THREE.HemisphereLight('#fff4e2', '#6f5f4c', isRoom ? 1.45 : 1.3));
+  scene.add(SKY ? new THREE.HemisphereLight(SKY.hemi[0], SKY.hemi[1], SKY.hemi[2]) : new THREE.HemisphereLight('#fff4e2', '#6f5f4c', isRoom ? 1.45 : 1.3));
   const all = W.floors.reduce((b, f) => ({ x1: Math.min(b.x1, f.x1), x2: Math.max(b.x2, f.x2), z1: Math.min(b.z1, f.z1), z2: Math.max(b.z2, f.z2) }),
     { x1: W.house.x1, x2: W.house.x2, z1: W.house.z1, z2: W.house.z2 });
   const centre = new THREE.Vector3((all.x1 + all.x2) / 2, 0, (all.z1 + all.z2) / 2);
@@ -371,7 +377,7 @@ export function createWalk(host: HTMLElement, opt: WalkOptions): WalkController 
   /** 해의 방위각(세계 +z가 0, +x 쪽이 +). 사진 캐릭터의 그림자 판이 이쪽을 본다 */
   const sunAt = sunDir ? Math.atan2(sunDir.x, sunDir.z) : null;
   if (sunDir) {
-    const sun = new THREE.DirectionalLight('#fff0d6', 2.1);
+    const sun = SKY ? new THREE.DirectionalLight(SKY.sun[0], SKY.sun[1]) : new THREE.DirectionalLight('#fff0d6', 2.1);
     sun.position.copy(centre).add(sunDir.clone().multiplyScalar(reach * 2.2));
     sun.target.position.copy(centre);
     sun.castShadow = true;
@@ -448,6 +454,8 @@ export function createWalk(host: HTMLElement, opt: WalkOptions): WalkController 
     cornice: std({ color: '#f6efe1', roughness: 0.75 }),
   };
   const glass = std({ color: '#a8c3d3', roughness: 0.05, metalness: 0, transparent: true, opacity: isRoom ? 0.13 : 0.22, emissive: '#dfeaf2', emissiveIntensity: isRoom ? 0.05 : 0.12, depthWrite: false });
+  // 밤: 창유리가 하늘색으로 희게 뜨지 않고 안의 불빛처럼 은은히 따뜻하다(안에서 밖의 별을 가리지 않을 만큼만)
+  if (SKY) { glass.emissive.set(SKY.glass[0]); glass.emissiveIntensity = SKY.glass[1]; }
   const ceilingMat = { 1: std({ color: roomShell?.ceilingColor ?? '#f1e8d6', roughness: 0.92 }), 2: std({ color: '#2b2622', roughness: 0.9 }) } as const;
   const ghostCache = new Map<THREE.Material, THREE.Material>();
   const ghostOf = (m: THREE.Material) => {
@@ -1185,7 +1193,8 @@ export function createWalk(host: HTMLElement, opt: WalkOptions): WalkController 
   // 전망: 마당 밖 평지 대신 뒤로 바위산, 앞으로 산자락 동네(집 세계에만). 손가락 기기는 나무·집을 절반 이하로
   let scenery: Scenery | null = null;
   if (LOOK.scenery) {
-    scenery = buildScenery(W, opt.season, opt.coarse, () => { if (dirty < 2) dirty = 2; });
+    scenery = buildScenery(W, opt.season, opt.coarse, () => { if (dirty < 2) dirty = 2; },
+      { sky: opt.sky, still: opt.reducedMotion, pixelRatio: renderer.getPixelRatio() });
     scene.add(scenery.group);
   }
 
@@ -1247,6 +1256,31 @@ export function createWalk(host: HTMLElement, opt: WalkOptions): WalkController 
       onStale: () => { try { opt.onGalleryStale?.(); } catch { /* 화면 쪽 오류가 그리기를 멈추지 않게 */ } },
     })
     : null;
+  // 밤: 등 밑 따뜻한 빛 웅덩이를 밝힌다(더하기로 섞는 재질이라 색을 키우면 웅덩이가 밝아진다). 같은 재질을 여러 번 키우지 않게 한 번씩만
+  if (SKY) {
+    const boosted = new Set<THREE.Material>();
+    const poolMats: THREE.MeshBasicMaterial[] = [];
+    scene.traverse((o) => {
+      const m = (o as THREE.Mesh).material;
+      if (!m || Array.isArray(m) || m.name !== GLOW_POOL || boosted.has(m)) return;
+      boosted.add(m);
+      poolMats.push(m as THREE.MeshBasicMaterial);
+      (m as THREE.MeshBasicMaterial).color.multiplyScalar(SKY.pools);
+    });
+    // 밤에만 길가 등 밑에도 빛 웅덩이를 깐다(낮에는 두지 않는다). 같은 재질이라 그리기 한 번에 다 그린다
+    const lamps = W.furniture.filter((f) => f.kind === 'pathLight');
+    if (poolMats[0] && lamps.length) {
+      const parts = lamps.map((f) => new THREE.PlaneGeometry(1.7, 1.7).rotateX(-Math.PI / 2).translate((f.x1 + f.x2) / 2, 0.018, (f.z1 + f.z2) / 2));
+      const merged = mergeGeometries(parts, false);
+      parts.forEach((g) => g.dispose());
+      if (merged) {
+        keep(merged);
+        const pools = new THREE.Mesh(merged, poolMats[0]);
+        pools.name = 'night-path-pools';
+        scene.add(pools);
+      }
+    }
+  }
   scene.updateMatrixWorld(true);
   // 빛은 숨기는 묶음 밖으로(숨김마다 셰이더를 다시 짓지 않게, 대신 세기를 0으로)
   for (const l of furn.lights) scene.attach(l.light);
@@ -2328,6 +2362,8 @@ export function createWalk(host: HTMLElement, opt: WalkOptions): WalkController 
     if (moving || mv > 1e-5 || hop.air || landed || sitMoved || ledge !== 0 || undo !== null || path !== null || turnTo !== null) meActiveAt = now;
     // 갤러리: 가까운 액자 그림을 싣고 먼 것은 내린다. 그리지 않는 프레임에도 이어 받고(다 실리면 onChange가 다시 그리게 한다)
     gallery?.update(body.level, body.x, body.z, now);
+    // 밤하늘: 별 반짝임 시각과 지금 그리기 배율을 넘기고, 별똥별이 화면 안에 보이는 동안만 매 프레임 그린다(그 밖엔 쉬는 동안 0.5초에 한 장)
+    if (scenery?.update?.(now, camera, renderer.getPixelRatio(), !inHouse) && dirty < 1) dirty = 1;
     if (dirty === 0 && now - activeAt > IDLE_TAIL_MS && now - drawnAt < IDLE_KEEP_MS) return;
     if (dirty > 0) dirty--;
     drawnAt = now;

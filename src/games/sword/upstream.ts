@@ -3,11 +3,11 @@ export const UPSTREAM_SNAPSHOT = {
   "repo": "johnfkoo951/sword-continent",
   "repoUrl": "https://github.com/johnfkoo951/sword-continent",
   "branch": "main",
-  "commitSha": "4538e8c",
-  "version": "v3.7",
-  "editionKo": "v3.7 · 영역전개 바위 비산 착지 에디션",
-  "editionEn": "v3.7 · Domain Expansion & Rock-Shatter Landing Edition",
-  "playUrl": "https://brewpage.app/api/html/public/Hye23cU10a",
+  "commitSha": "562b72c",
+  "version": "v4.4",
+  "editionKo": "v4.4 · 왕드래곤 대군주 강림 에디션",
+  "editionEn": "v4.4 · King Dragon Overlord Edition",
+  "playUrl": "https://raw.githubusercontent.com/johnfkoo951/sword-continent/562b72ca5d86fff6b4102850bc321b20fab688d8/index.html",
   "coopRoomCode": "7794",
-  "syncedAt": "2026-11-13T07:49:18.859Z"
+  "syncedAt": "2026-11-14T01:47:43.545Z"
 } as const;

@@ -154,13 +154,33 @@ export async function resolveSwordUpstream(forceRefresh = false): Promise<SwordU
 // 공개 비로그인 방문자에게는 아이 본명 문자열을 중립 모험가 호칭으로 마스킹한다(코드에는 리터럴을 두지 않는다).
 const MASK_A = String.fromCharCode(0xd0dc, 0xc6a9);
 const MASK_B = String.fromCharCode(0xd0dc, 0xc0b0);
+// v4.4의 2P 호칭(형을 부르는 애칭). 조사 '과'는 받침 없는 '수호자' 뒤에서 '와'가 된다.
+const MASK_C = String.fromCharCode(0xc0b0, 0xc774, 0x20, 0xd615);
+
+/** 공개 화면용 호칭 바꾸기. 긴 것부터 바꿔야 짧은 이름이 먼저 먹지 않는다. */
+const NAME_MASKS: ReadonlyArray<readonly [string, string]> = [
+  [`${MASK_C}과`, '수호자와'],
+  [MASK_C, '수호자'],
+  [`1P ${MASK_A}이`, '1P 용사'],
+  [`${MASK_A}이 (1P)`, '용사 (1P)'],
+  [`${MASK_A}이가`, '용사가'],
+  [`${MASK_A}이`, '용사 1P'],
+  [MASK_A, '용사'],
+  [MASK_B, '수호자'],
+];
 
 const BRIDGE_SCRIPT = `
 <script>
 (function(){
+  // 왕드래곤을 잡으면 게임이 피리·소환 표시를 다시 끈다. 한 번 지난 단계는 여기서 기억한다.
+  var seen = { flute: false, summoned: false, down: false };
   var send = function() {
     try {
       if (typeof state === 'object' && state) {
+        var ending = document.getElementById('kingEndingModal');
+        if (state.hasFlute) seen.flute = true;
+        if (state.kingSpawned) seen.summoned = true;
+        if (ending && window.getComputedStyle(ending).display !== 'none') seen.down = true;
         window.parent.postMessage({
           type: 'jy:sword-state',
           started: Boolean(state.started),
@@ -168,7 +188,11 @@ const BRIDGE_SCRIPT = `
           level: Number(state.level) || 1,
           candies: Number(state.candies) || 0,
           totalCandies: Number(state.totalCandiesFed) || Number(state.candies) || 0,
-          kills: Number(state.stageKills) || 0
+          kills: Number(state.stageKills) || 0,
+          totalKills: Number(state.totalKills) || Number(state.stageKills) || 0,
+          flute: seen.flute,
+          dragonSummoned: seen.summoned,
+          dragonDown: seen.down
         }, '*');
       }
     } catch (_) {}
@@ -183,10 +207,7 @@ const BRIDGE_SCRIPT = `
 export function transformSwordHtml(rawHtml: string, opts: { allowFamilyNames: boolean; playUrl: string }): string {
   let html = rawHtml;
   if (!opts.allowFamilyNames) {
-    html = html
-      .replaceAll(`${MASK_A}이`, '용사 1P')
-      .replaceAll(MASK_A, '용사')
-      .replaceAll(MASK_B, '수호자');
+    for (const [from, to] of NAME_MASKS) html = html.replaceAll(from, to);
   }
   // 상대경로 에셋이 있을 때를 대비해 <base> 보강
   if (opts.playUrl.startsWith('https://raw.githubusercontent.com/')) {

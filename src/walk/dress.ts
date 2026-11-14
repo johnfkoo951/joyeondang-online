@@ -31,6 +31,8 @@ const TAU = Math.PI * 2;
 const tmpColor = new THREE.Color();
 
 /** 꼭짓점 색 재질(가구 꽃 재질과 같은 열쇠라 한 재질을 함께 쓴다) */
+/** 등 밑 따뜻한 빛 웅덩이 재질의 이름(밤하늘이면 scene.ts가 찾아 밝힌다) */
+export const GLOW_POOL = 'glow-pool';
 export const vertexMat = (kit: FurnitureKit) => kit.once('m:bloom', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
 
 /** 놋쇠·은 같은 금속 장식(그림등·그림틀 테): 꼭짓점 색 하나에 금속 성질. 층마다 한 번에 그린다 */
@@ -433,6 +435,8 @@ export function dressHouse(world: HouseWorld, plan: DecorPlan, kit: FurnitureKit
     m.polygonOffset = true;
     m.polygonOffsetFactor = -2;
     m.polygonOffsetUnits = -2;
+    // 밤하늘이면 scene.ts가 이 이름으로 찾아 웅덩이를 밝힌다
+    m.name = GLOW_POOL;
     return m;
   });
   const tiles = tileMat(kit);

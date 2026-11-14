@@ -3,13 +3,23 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { HouseWorld } from './types';
 // @ts-expect-error Direct Node TypeScript tests require an explicit extension.
 import { buildLandscapeDetail } from './landscape-detail.ts';
+// @ts-expect-error Direct Node TypeScript tests require an explicit extension.
+import { buildNightSky } from './night-sky.ts';
+// @ts-expect-error Direct Node TypeScript tests require an explicit extension.
+import { skyLook, type WalkSky } from './sky.ts';
 
 // Continuous volumetric scenery: sculptural forest, modern low-rise buildings and ink-toned rock masses.
 // Decorative only; the supplied courtyard and collision geometry are unchanged.
 // 지명·주소는 넣지 않는다(공개 빌드 개인정보 검사).
 
 export type SceneSeason = 'spring' | 'summer' | 'autumn' | 'winter';
-export type Scenery = { group: THREE.Group; groundAt: (x: number, z: number) => number; dispose: () => void };
+export type Scenery = {
+  group: THREE.Group; groundAt: (x: number, z: number) => number; dispose: () => void;
+  /** 밤하늘이면 프레임마다 부른다(night-sky.ts). 별똥별이 화면 안에 보이는 동안 참(그동안은 매 프레임 그린다) */
+  update?: (now: number, camera: THREE.Camera, pixelRatio: number, outdoors: boolean) => boolean;
+};
+/** 하늘 고르기(sky.ts). still이면 별이 반짝이지 않고 별똥별도 없다(움직임 줄이기) */
+export type SceneryOptions = { sky?: WalkSky; still?: boolean; pixelRatio?: number };
 
 function hash(ix: number, iz: number, seed: number) {
   let h = Math.imul(ix, 374761393) ^ Math.imul(iz, 668265263) ^ Math.imul(seed, 1442695041);
@@ -159,13 +169,17 @@ export function gridCoord(s: number, half = 1200, k = 0.2): number {
 }
 
 /** Scene-owned static landscape: no image planes, asynchronous sky loads or animation loop. */
-export function buildScenery(world: HouseWorld, season: SceneSeason, lite = false, onChange: () => void = () => {}): Scenery {
+export function buildScenery(world: HouseWorld, season: SceneSeason, lite = false, onChange: () => void = () => {}, opts: SceneryOptions = {}): Scenery {
   const cap = lite ? SCATTER.lite : SCATTER.full;
   const { P, b, cx, cz, groundAt } = terrain(world);
   const group = new THREE.Group();
   group.name = 'sculptural-landscape';
   const own: Array<{ dispose: () => void }> = [];
-  const sky = sculpturalSky(cx, cz); group.add(sky); own.push(sky.geometry, sky.material);
+  // 밤이면 낮 하늘 구 대신 밤하늘(별, 은하수, 별똥별)을 걸고, 빛을 받지 않는 땅 색을 낮춘다
+  const look = skyLook(opts.sky ?? 'day');
+  const night = look?.night ? buildNightSky(cx, cz, look, { lite, still: !!opts.still, pixelRatio: opts.pixelRatio ?? 1 }) : null;
+  if (night) { group.add(night.group); own.push(night); }
+  else { const sky = sculpturalSky(cx, cz); group.add(sky); own.push(sky.geometry, sky.material); }
   const lambert = (p: THREE.MeshLambertMaterialParameters) => { const m = new THREE.MeshLambertMaterial(p); own.push(m); return m; };
   const [forestA, forestB] = FOREST[season].map((h) => new THREE.Color(h));
   const grass = new THREE.Color(season === 'winter' ? '#a9ab9a' : season === 'autumn' ? '#8e9b7c' : '#86a66c');
@@ -225,6 +239,8 @@ export function buildScenery(world: HouseWorld, season: SceneSeason, lite = fals
     `);
   };
   groundMat.customProgramCacheKey = () => 'detailed-daylight-ground-v3';
+  // 땅은 빛을 받지 않는 재질이라 밤빛에 어두워지지 않는다: 하늘의 풍경 색을 곱한다(셰이더는 그대로)
+  if (look) groundMat.color.set(look.landscape);
   own.push(groundMat);
   const ground = new THREE.Mesh(g, groundMat);
   ground.receiveShadow = true;
@@ -239,18 +255,32 @@ export function buildScenery(world: HouseWorld, season: SceneSeason, lite = fals
   terrace.receiveShadow = true;
   group.add(terrace);
 
-  scatter(group, own, lambert, { P, cx, cz, groundAt, season, cap });
+  scatter(group, own, lambert, { P, cx, cz, groundAt, season, cap, night: !!night });
   const detail = buildLandscapeDetail({ b, cx, cz, groundAt }, lite); group.add(detail.group); own.push(detail);
+  // 밤: 빛을 받는 나무·집·바위도 땅에 맞춰 조금 더 어둡게(밤빛만으로는 낮 색이 남아 땅보다 밝게 떠 보였다). 재질마다 한 번씩만
+  if (night) {
+    const shaded = new Set<THREE.Material>();
+    group.traverse((o) => {
+      const m = (o as THREE.Mesh).material;
+      if (!m || Array.isArray(m) || shaded.has(m) || !(m instanceof THREE.MeshLambertMaterial)) return;
+      shaded.add(m);
+      m.color.multiplyScalar(0.55);
+    });
+  }
   // onChange is retained for API compatibility; this landscape is fully synchronous.
   void onChange;
   let disposed = false;
-  return { group, groundAt, dispose: () => { if (disposed) return; disposed = true; group.removeFromParent(); own.forEach((o) => o.dispose()); } };
+  return {
+    group, groundAt,
+    update: night?.update,
+    dispose: () => { if (disposed) return; disposed = true; group.removeFromParent(); own.forEach((o) => o.dispose()); },
+  };
 }
 
 /** Shared geometry with varied placement: modern homes, broad tree crowns and layered groves. */
 function scatter(group: THREE.Group, own: Array<{ dispose: () => void }>, lambert: (p: THREE.MeshLambertMaterialParameters) => THREE.MeshLambertMaterial,
   o: { P: { x1: number; x2: number; z1: number; z2: number }; cx: number; cz: number; groundAt: (x: number, z: number) => number; season: SceneSeason;
-    cap: { houses: number; pines: number; leaves: number; city: number } }) {
+    cap: { houses: number; pines: number; leaves: number; city: number }; night?: boolean }) {
   const r = rand(97), m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), v = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
   const clearOf = (x: number, z: number, gap: number) => x < o.P.x1 - gap || x > o.P.x2 + gap || z < o.P.z1 - gap || z > o.P.z2 + gap;
   // 집: 앞 비탈에 촘촘히, 옆과 뒤 산자락에 드문드문
@@ -278,16 +308,26 @@ function scatter(group: THREE.Group, own: Array<{ dispose: () => void }>, lamber
     m.compose(v.set(x, y + h + 0.13, z), q, s.set(w * 1.06, 0.26, d * 1.08)); roofs.setMatrixAt(i, m); roofs.setColorAt(i, c.set(ROOF[(i * 7) % ROOF.length]));
   });
   walls.name = 'scenery-gallery-houses'; roofs.name = 'scenery-gallery-roofs';
-  const glazing = new THREE.InstancedMesh(box, lambert({ color: '#647572' }), houses.length);
+  // 밤에는 동네 창이 불을 켠다: 빛을 받지 않는 재질에 집마다 따뜻한 색(몇 집은 꺼 둔다). 낮은 그대로 유리색
+  const litWindow = (i: number) => (i * 37 + 11) % 10 < 7;
+  const windowMat = () => {
+    if (!o.night) return null;
+    const mat = new THREE.MeshBasicMaterial({ toneMapped: false });
+    own.push(mat);
+    return mat;
+  };
+  const warmA = new THREE.Color('#ffc477'), warmB = new THREE.Color('#ffe0a8'), dark = new THREE.Color('#1d2536');
+  const glazing = new THREE.InstancedMesh(box, windowMat() ?? lambert({ color: '#647572' }), houses.length);
   houses.forEach(([x, z, w, d, h, a], i) => {
     const offset = new THREE.Vector3(0, 0, d * 0.506).applyAxisAngle(up, a);
     q.setFromAxisAngle(up, a);
     m.compose(v.set(x + offset.x, o.groundAt(x, z) - 0.6 + h * 0.22, z + offset.z), q, s.set(w * 0.73, h * 0.57, 0.04)); glazing.setMatrixAt(i, m);
+    if (o.night) glazing.setColorAt(i, litWindow(i) ? c.copy(warmA).lerp(warmB, (i % 5) / 4) : dark);
   });
   group.add(walls, roofs, glazing); own.push(walls, roofs, glazing);
   const groveCount = o.cap.houses > 30 ? 12 : 6;
   const gallery = new THREE.InstancedMesh(box, lambert({ color: '#ede8d9' }), groveCount);
-  const windows = new THREE.InstancedMesh(box, lambert({ color: '#6c807d' }), groveCount);
+  const windows = new THREE.InstancedMesh(box, windowMat() ?? lambert({ color: '#6c807d' }), groveCount);
   for (let i = 0; i < groveCount; i++) {
     const lane = i % 3, row = Math.floor(i / 3);
     const x = o.cx + (lane - 1) * 43 + Math.sin(i * 2.4) * 12;
@@ -295,6 +335,7 @@ function scatter(group: THREE.Group, own: Array<{ dispose: () => void }>, lamber
     const y = o.groundAt(x, z), h = 10 + i % 3;
     m.compose(v.set(x, y, z), q.identity(), s.set(12 + i % 4, h, 9)); gallery.setMatrixAt(i, m);
     m.compose(v.set(x, y + h * 0.32, z - 4.53), q.identity(), s.set(9, h * 0.48, 0.05)); windows.setMatrixAt(i, m);
+    if (o.night) windows.setColorAt(i, c.copy(warmB).lerp(warmA, (i % 3) / 2));
   }
   gallery.name = 'scenery-near-galleries'; group.add(gallery, windows); own.push(gallery, windows);
   // 나무: 뒤 산자락은 소나무 숲, 마을 사이사이 활엽수

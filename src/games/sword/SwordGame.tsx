@@ -12,6 +12,24 @@ import {
 } from './logic';
 import s from './sword.module.css';
 
+/** 순위표에 함께 남길 진행 기록(숫자만). 왕드래곤 단계는 0 피리 전, 1 피리, 2 소환, 3 격파. */
+function swordDetail(p: SwordProgress): Record<string, number> {
+  return {
+    stage: p.stage,
+    level: p.level,
+    candies: Math.max(p.totalCandies, p.candies),
+    kills: Math.max(p.totalKills, p.kills),
+    dragon: p.dragonDown ? 3 : p.dragonSummoned ? 2 : p.flute ? 1 : 0,
+  };
+}
+
+function dragonMark(p: SwordProgress, en: boolean): string {
+  if (p.dragonDown) return en ? ' · 🐉 King Dragon down!' : ' · 🐉 왕드래곤 격파!';
+  if (p.dragonSummoned) return en ? ' · 🐉 King Dragon fight' : ' · 🐉 왕드래곤과 싸우는 중';
+  if (p.flute) return en ? ' · 🪈 Golden flute' : ' · 🪈 황금 피리';
+  return '';
+}
+
 export function SwordGame({ ctx }: { ctx: GameContext }) {
   const lang = useLang();
   const [meta, setMeta] = useState<SwordUpstreamMeta>(SWORD_SNAPSHOT);
@@ -51,11 +69,7 @@ export function SwordGame({ ctx }: { ctx: GameContext }) {
           cleared,
           score: hi,
           ms: Math.max(1000, Math.round(performance.now() - startMsRef.current)),
-          detail: {
-            stage: nextProg.stage,
-            level: nextProg.level,
-            candies: Math.max(nextProg.totalCandies, nextProg.candies),
-          },
+          detail: swordDetail(nextProg),
         });
       }
     },
@@ -64,6 +78,8 @@ export function SwordGame({ ctx }: { ctx: GameContext }) {
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
+      // 이 방의 게임 창이 보낸 것만 받는다(다른 창이 점수를 꾸며 보내지 못하게).
+      if (e.source !== frameRef.current?.contentWindow) return;
       const parsed = parseSwordMessage(e.data);
       if (!parsed) return;
       setProgress(parsed);
@@ -114,11 +130,7 @@ export function SwordGame({ ctx }: { ctx: GameContext }) {
       cleared: b.cleared || b.score >= 100,
       score: b.score,
       ms: Math.max(1000, Math.round(performance.now() - startMsRef.current)),
-      detail: {
-        stage: b.progress.stage,
-        level: b.progress.level,
-        candies: Math.max(b.progress.totalCandies, b.progress.candies),
-      },
+      detail: swordDetail(b.progress),
     });
   };
 
@@ -136,8 +148,8 @@ export function SwordGame({ ctx }: { ctx: GameContext }) {
           </span>
           <span className={s.scoreBadge}>
             {lang === 'en'
-              ? `Stage ${progress.stage} · Lv.${progress.level} · 🍬 ${progress.candies} · ${bestScore} pts`
-              : `스테이지 ${progress.stage} · Lv.${progress.level} · 🍬 ${progress.candies} · ${bestScore}점`}
+              ? `Stage ${progress.stage} · Lv.${progress.level} · 🍬 ${progress.candies} · ⚔️ ${progress.totalKills}${dragonMark(progress, true)} · ${bestScore} pts`
+              : `스테이지 ${progress.stage} · Lv.${progress.level} · 🍬 ${progress.candies} · ⚔️ ${progress.totalKills}${dragonMark(progress, false)} · ${bestScore}점`}
           </span>
         </div>
         <div className={s.rightGroup}>

@@ -1,0 +1,135 @@
+/* 방 의견함. 색은 사이트 토큰만 쓴다(다크 모드는 globals.css가 바꾼다) */
+.board { display: grid; gap: 18px; }
+.intro { display: grid; gap: 8px; }
+.versionLine { margin: 0; }
+
+.rooms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 10px;
+}
+.roomTab {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+}
+.roomTab:hover { background: var(--paper-3); }
+.roomTab[aria-pressed="true"] { border-color: var(--pine); box-shadow: inset 0 0 0 1px var(--pine); background: var(--paper); }
+.roomTab:focus-visible, .linkBtn:focus-visible { outline: 3px solid var(--pine); outline-offset: 2px; }
+.owner { color: var(--ink-3); font-weight: 400; font-size: 0.86em; }
+.tabMeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tabStamp { font-variant-numeric: tabular-nums; }
+
+.status {
+  font-size: 0.78em;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+.status[data-status="done"] { background: var(--pine); border-color: var(--pine); color: var(--pine-on); }
+.status[data-status="draft"] { border-color: var(--roof); color: var(--roof); }
+
+.badgeNew {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 0.74em;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--roof);
+  color: var(--roof-on);
+  vertical-align: middle;
+}
+
+.panel { scroll-margin-top: 84px; }
+.panelHead { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: flex-start; }
+.stamp { font-size: 0.92em; color: var(--ink-2); }
+.stamp summary { cursor: pointer; }
+.stamp ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.changed {
+  border-left: 4px solid var(--roof);
+  background: var(--paper);
+  padding: 10px 12px;
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.group { border: 0; padding: 0; margin: 0; min-width: 0; }
+.group legend { font-weight: 700; padding: 0; margin-bottom: 8px; }
+.items { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 14px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.item[data-mark="keep"] { border-left-color: var(--pine); }
+.item[data-mark="change"] { border-left-color: var(--roof); }
+.item[data-mark="remove"] { border-left-color: var(--ink-3); }
+.itemText { display: grid; gap: 2px; min-width: 0; }
+.itemName { font-weight: 600; }
+.itemDetail, .parts { overflow-wrap: anywhere; }
+.parts { color: var(--ink-2); }
+.marks { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.mark { min-height: 36px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 0.9em; cursor: pointer; }
+.mark[data-kind="keep"][aria-pressed="true"] { background: var(--pine); border-color: var(--pine); color: var(--pine-on); }
+.mark[data-kind="change"][aria-pressed="true"] { background: var(--roof); border-color: var(--roof); color: var(--roof-on); }
+.mark[aria-expanded="true"] { border-color: var(--ink-2); }
+.note {
+  grid-column: 1 / -1;
+  width: 100%;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.question { display: grid; gap: 4px; }
+.qLabel { font-weight: 600; }
+.question input, .question textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  width: 100%;
+}
+
+.footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+.save { font-variant-numeric: tabular-nums; }
+.saveError { color: var(--roof); font-weight: 600; }
+
+.allHead { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+.linkBtn { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.entry { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.entryHead { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.entryList { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.markTag { font-size: 0.8em; font-weight: 700; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line-2); }
+.markTag[data-kind="keep"] { color: var(--pine); border-color: var(--pine); }
+.markTag[data-kind="change"] { color: var(--roof); border-color: var(--roof); }
+.noteText { color: var(--ink-2); white-space: pre-wrap; }
+.answers { margin: 0; display: grid; gap: 6px; }
+.answers dt { font-weight: 600; font-size: 0.9em; }
+.answers dd { margin: 0; white-space: pre-wrap; color: var(--ink-2); }
+
+@media (max-width: 560px) {
+  .item { grid-template-columns: 1fr; }
+  .marks { justify-content: flex-start; }
+  .rooms { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -81,7 +81,7 @@ const EXACT: Readonly<Record<string, string>> = {
   "2주간 변박을 반복해 익힌 사연과 공연 무대 빛의 리본 연출 노트를 펼쳐 봅니다.": "Open the story of two weeks spent drilling odd meters, and the notes behind the stage's ribbons of light.",
   "박공 아래 잼 · 리듬 천국 · 이어 트레이닝 세 놀이의 실시간 최고 순위표예요.": "Live top scores for three games: Jam under the gable, Jazz rhythm studio and Jazz ear training.",
   "지나치지 않고 모아 온 조개껍데기와 색색의 산길 조약돌, 엉뚱한 상상 스케치북이에요.": "Seashells picked up along the way, colorful pebbles from mountain paths, and a sketchbook of wild ideas.",
-  "4대 왕국 18스테이지를 돌파하며 사탕으로 레벨업하고 10대 스킨과 보스 레이드, 2인 협동을 즐기는 3D 액션 RPG예요.": "Battle across four kingdoms and 18 stages, level up with candies, unlock 10 hero skins and team up for 2P boss raids in 3D.",
+  "5대 왕국 26스테이지를 돌파하며 사탕으로 레벨업하고, 몬스터 50마리를 잡아 얻은 황금 피리로 왕드래곤 대군주를 불러내 싸우는 3D 액션 RPG예요. 11대 스킨과 2인 협동도 있어요.": "Battle across five kingdoms and 26 stages, level up with candies, earn the golden flute after 50 monsters and summon the King Dragon Overlord in 3D. 11 hero skins and 2P co-op included.",
   "소드 콘티넌트와 선반 꾸미기 놀이의 실시간 최고 기록을 함께 확인해요.": "See the live top records for The Sword Continent and the shelf game together.",
   "선반 꾸미기 놀이 기록을 함께 확인해요.": "See the shelf game records together.",
   "수학 퍼즐과 스포츠 공, 스스로 정리하는 첫 볼트 기록장이 놓인 책상이에요.": "A desk with math puzzles, sports balls and a first vault notebook its owner keeps all on their own.",

@@ -1,6 +1,6 @@
 {
   "name": "joyeondang-online",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test": "node --env-file-if-exists=private/test.env --test \"tests/**/*.test.ts\" \"tests/**/*.test.mjs\" \"private/tests/**/*.test.mjs\"",
     "privacy": "node tools/privacy-gate.mjs",
+    "room-stamps": "node tools/room-stamps.ts",
     "verify": "node tools/privacy-gate.mjs && next build && node tools/privacy-gate.mjs --build",
     "sync:sword": "node tools/sync-sword-continent.mjs"
   },

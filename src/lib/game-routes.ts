@@ -71,7 +71,7 @@ export const STANDALONE_GAME_META: Readonly<Record<CanonicalGameId, { title: str
   watercolor: { title: '창가에서 수채 그림그리기', blurb: '거실 창가의 이젤에서 물감을 겹쳐 그리고 내 그림을 내려받아요.' },
   sword: {
     title: '소드 콘티넌트',
-    blurb: '4대 왕국 18스테이지를 돌파하며 사탕으로 레벨업하고 10대 스킨과 보스 레이드, 2인 협동을 즐기는 3D 액션 RPG예요.',
+    blurb: '5대 왕국 26스테이지를 돌파하며 사탕으로 레벨업하고, 몬스터 50마리를 잡아 얻은 황금 피리로 왕드래곤 대군주를 불러내 싸우는 3D 액션 RPG예요. 11대 스킨과 2인 협동도 있어요.',
   },
   groove: {
     title: '리듬 천국 재즈 스튜디오',

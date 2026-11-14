@@ -123,6 +123,18 @@
 }
 .mentionBtn:hover { background: var(--paper-2); }
 .sheet[data-coarse] .mentionBtn { min-height: 40px; }
+/* 「걸어가기」·「바로 가기」: 이름 아래 한 줄(그림 칸은 비우고 이름 칸부터 끝까지). 좁으면 까닭이 다음 줄로 내려간다 */
+.go { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -2px; }
+.goBtn {
+  padding: 4px 10px; min-height: 32px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.8rem; font-weight: 700;
+  white-space: nowrap; color: var(--pine); background: var(--paper); border: 1px solid var(--line-2);
+}
+.goBtn:hover:not(:disabled) { background: var(--paper-2); }
+.goBtn:disabled { cursor: default; color: var(--ink-3); background: transparent; border-style: dashed; }
+.goWhy { flex: 1 1 8em; min-width: 0; font-size: 0.76rem; color: var(--ink-3); overflow-wrap: anywhere; }
+.sheet[data-coarse] .goBtn { min-height: 40px; }
+/* 두 단추가 어떻게 다른지(무리 제목 아래 한 번). 줄의 「있는 곳」 글과 같은 크기 */
+.goHelp { margin: 0 0 4px; font-size: 0.76rem; line-height: 1.45; color: var(--ink-3); }
 
 .thumb {
   position: relative; flex: none; display: inline-grid; place-items: center; overflow: hidden; border-radius: 50%;
@@ -164,7 +176,7 @@
   .card { animation: none; }
 }
 
-.older:focus-visible, .headBtn:focus-visible, .x:focus-visible, .del:focus-visible, .delYes:focus-visible, .mentionBtn:focus-visible,
+.older:focus-visible, .headBtn:focus-visible, .x:focus-visible, .del:focus-visible, .delYes:focus-visible, .mentionBtn:focus-visible, .goBtn:focus-visible,
 .pickItem:focus-visible, .pickOn:focus-visible, .cardMain:focus-visible, .cardX:focus-visible, .newPill:focus-visible, .input:focus-visible {
   outline: 3px solid var(--focus); outline-offset: 2px;
 }

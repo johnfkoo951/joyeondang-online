@@ -1,0 +1,17 @@
+/* 밤하늘 안내: 위 줄의 띠 자리(길 찾기, 지도 고르기, 만들기 칩이 쓰는 곳)를 피해 화면 가운데 위쪽에 잠깐 띄운다.
+   누르는 것이 없으므로 손가락과 마우스는 그대로 뒤로 지나간다 */
+.hint {
+  position: absolute; left: 50%; top: 26%; transform: translateX(-50%); z-index: 3;
+  width: max-content; max-width: min(calc(100% - 48px), 420px);
+  padding: 12px 18px; border-radius: 18px; text-align: center; line-height: 1.45;
+  font-weight: 800; background: color-mix(in srgb, var(--pine) 88%, transparent); color: var(--pine-on);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.3); pointer-events: none; overflow-wrap: anywhere;
+}
+.note { display: block; font-size: 1.05em; }
+@media (prefers-reduced-motion: no-preference) {
+  .hint { animation: sky-hint-in 0.4s ease-out; }
+}
+@keyframes sky-hint-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}

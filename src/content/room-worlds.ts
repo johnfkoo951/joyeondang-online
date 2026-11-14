@@ -29,7 +29,7 @@ export const ROOM_GAMES: Record<string, Array<{ id: string; title: string; blurb
     },
   ],
   toybox: [
-    { id: 'sword', title: '소드 콘티넌트', blurb: '4대 왕국 18스테이지를 돌파하며 사탕으로 레벨업하고 10대 스킨과 보스 레이드, 2인 협동을 즐기는 3D 액션 RPG예요.' },
+    { id: 'sword', title: '소드 콘티넌트', blurb: '5대 왕국 26스테이지를 돌파하며 사탕으로 레벨업하고, 몬스터 50마리를 잡아 얻은 황금 피리로 왕드래곤 대군주를 불러내 싸우는 3D 액션 RPG예요. 11대 스킨과 2인 협동도 있어요.' },
     { id: 'shelf', title: '좋아하는 것 선반', blurb: '선반에 좋아하는 것들을 골라 올려 나만의 선반을 꾸며요.' },
   ],
   target: [{ id: 'target', title: '종이공 과녁', blurb: '종이공을 던져 떠오르는 과녁을 맞혀요. 60초 동안 몇 개나 맞힐까요?' }],

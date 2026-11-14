@@ -3,6 +3,7 @@
 // 이 파일은 타입만 가져온다(시험이 그대로 읽는다). 고르는 일은 부르는 쪽이 lang으로 한다.
 import type { Door } from '@/content/rooms';
 import type { ChatReason } from '@/lib/social';
+import type { GoWhy } from './social/go-to-person';
 
 export type Lang = 'ko' | 'en';
 /** [한국어, 영어] */
@@ -119,7 +120,7 @@ export const GAME_EN: Readonly<Record<string, { title: string; blurb: string }>>
   calligraphy: { title: 'Trace a constant heart', blurb: 'Trace 恒常心 on the writing desk and finish with your own seal.' },
   watercolor: { title: 'Watercolors by the window', blurb: 'Layer watercolor washes on the living-room easel and download your painting.' },
   jam: { title: 'Jam under the gable', blurb: 'Listen to four beats and play them back. Clear three rounds to add two bars to today’s song.' },
-  sword: { title: 'The Sword Continent', blurb: 'Battle across four kingdoms and 18 stages, level up with candies, unlock 10 hero skins and team up for 2P boss raids in 3D.' },
+  sword: { title: 'The Sword Continent', blurb: 'Battle across five kingdoms and 26 stages, level up with candies, earn the golden flute after 50 monsters and summon the King Dragon Overlord in 3D. 11 hero skins and 2P co-op included.' },
   shelf: { title: 'Favorite things shelf', blurb: 'Pick your favorite things and put them on the shelf to make it your own.' },
   target: { title: 'Paper ball target', blurb: 'Throw paper balls at the targets that pop up. How many can you hit in 60 seconds?' },
   brain: { title: 'Mind map quiz', blurb: 'Put each word in the right knowledge drawer, then put the steps of a growing thought in order.' },
@@ -162,6 +163,15 @@ export function chatReasonEn(reason: ChatReason, n: { body: number; mentions: nu
 }
 
 // 앱 안 브라우저 안내(WalkInApp)의 앱 이름과 단추 글은 lib/inapp.ts의 INAPP_NAME_EN, escapeLabel(kind, ua, lang)을 쓴다
+
+// ───────── 접속자 목록의 「걸어가기」·「바로 가기」를 못 쓰는 까닭(social/go-to-person.ts의 GoWhy)
+export const GO_WHY: Readonly<Record<GoWhy, Pair>> = {
+  away: ['다른 곳에 있어요', 'In another place'],
+  unseen: ['아직 어디 있는지 몰라요', 'Can’t see where they are yet'],
+  twin: ['같은 이름이 여럿이라 찾지 못해요', 'Several people have this name'],
+  nospot: ['옆에 빈자리가 없어요', 'No free spot next to them'],
+  wait: ['길 찾기를 준비하는 중이에요', 'Getting paths ready'],
+};
 
 // ───────── 수 세기(영어의 한 명·여러 명)
 /** 「1 person」, 「2 people」 */

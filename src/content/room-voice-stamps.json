@@ -1,0 +1,362 @@
+{
+  "rooms": {
+    "gable": {
+      "names": {
+        "base:look": "미드나잇 인디고 벽, 월넛 하단, 앰버 무대 조명",
+        "base:windows": "창 2개",
+        "base:sloped-ceiling": "박공 경사 천장",
+        "base:led-ribbon-wall": "빛의 리본 벽",
+        "base:pendant": "펜던트 조명",
+        "game:jam": "박공 아래 잼",
+        "game:groove": "리듬 천국 재즈 스튜디오",
+        "game:pitch": "재즈 이어 트레이닝 · 음정과 화성",
+        "spot:exhibit-gable-vinyl": "재즈 레코드 & 무대 리본 노트",
+        "spot:board-gable": "재즈 스튜디오 리더보드",
+        "item:piano": "업라이트 피아노",
+        "item:bench": "벤치",
+        "item:double-bass": "콘트라베이스",
+        "item:music-stand": "보면대",
+        "item:round-rug": "둥근 러그",
+        "item:sofa": "소파",
+        "item:coffee-table": "커피 테이블",
+        "item:record-cabinet": "레코드 캐비닛",
+        "item:armchair": "안락의자",
+        "item:floor-lamp": "스탠드 조명",
+        "item:plant": "화분",
+        "view": "초승달 밤바다 항구와 세 가닥 빛의 리본"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "2839b7790bd155f3",
+          "items": [
+            "base:look",
+            "base:windows",
+            "base:sloped-ceiling",
+            "base:led-ribbon-wall",
+            "base:pendant",
+            "game:jam",
+            "game:groove",
+            "game:pitch",
+            "spot:exhibit-gable-vinyl",
+            "spot:board-gable",
+            "item:piano",
+            "item:bench",
+            "item:double-bass",
+            "item:music-stand",
+            "item:round-rug",
+            "item:sofa",
+            "item:coffee-table",
+            "item:record-cabinet",
+            "item:armchair",
+            "item:floor-lamp",
+            "item:plant",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "toybox": {
+      "names": {
+        "base:look": "도화지 크림 벽과 코랄·골드 트림",
+        "base:windows": "창 2개",
+        "base:stripe-wall": "줄무늬 벽",
+        "base:play-mat": "놀이 매트",
+        "base:globe-lantern": "동그란 등",
+        "game:sword": "소드 콘티넌트",
+        "game:shelf": "좋아하는 것 선반",
+        "spot:exhibit-toybox-treasure": "바닷가 조개 & 예쁜 돌 보물상자",
+        "spot:board-toybox": "좋아하는 것 방 리더보드",
+        "item:toy-shelf": "장난감 선반",
+        "item:play-tent": "놀이 텐트",
+        "item:block-tower": "블록 탑",
+        "item:toy-chest": "장난감 상자",
+        "item:kid-desk": "그림 그리는 책상",
+        "item:bunting": "깃발 장식",
+        "item:plant": "화분",
+        "view": "노을 바닷가 조개섬과 색색 조약돌 언덕, 종이배"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "98d6ce9cec34070d",
+          "items": [
+            "base:look",
+            "base:windows",
+            "base:stripe-wall",
+            "base:play-mat",
+            "base:globe-lantern",
+            "game:sword",
+            "game:shelf",
+            "spot:exhibit-toybox-treasure",
+            "spot:board-toybox",
+            "item:toy-shelf",
+            "item:play-tent",
+            "item:block-tower",
+            "item:toy-chest",
+            "item:kid-desk",
+            "item:bunting",
+            "item:plant",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "target": {
+      "names": {
+        "base:look": "맑은 하늘빛 벽과 네이비·메이플 트림",
+        "base:windows": "창 1개",
+        "base:stripe-wall": "줄무늬 벽",
+        "base:play-mat": "놀이 매트",
+        "base:globe-lantern": "동그란 등",
+        "game:target": "종이공 과녁",
+        "spot:exhibit-target-summit": "만능 도전자 책상 & 첫 노트",
+        "spot:board-target": "종이공 과녁 리더보드",
+        "item:paper-basket": "종이공 바구니",
+        "item:toy-shelf": "장난감 선반",
+        "item:bunting": "깃발 장식",
+        "item:plant": "화분",
+        "view": "큰 바위산 봉우리와 초록 언덕 트랙, 열기구"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "e9e3dca037eb5ce3",
+          "items": [
+            "base:look",
+            "base:windows",
+            "base:stripe-wall",
+            "base:play-mat",
+            "base:globe-lantern",
+            "game:target",
+            "spot:exhibit-target-summit",
+            "spot:board-target",
+            "item:paper-basket",
+            "item:toy-shelf",
+            "item:bunting",
+            "item:plant",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "mind": {
+      "names": {
+        "base:look": "딥그린 갤러리 벽과 은빛 몰딩, 아래는 먹빛 옻칠",
+        "base:windows": "창 2개",
+        "game:brain": "생각 지도 퀴즈",
+        "spot:exhibit-mind-jisan": "지산(紙散) 에세이 & 개념 책상",
+        "spot:exhibit-mind-lectures": "메인 볼트 강의 자산 아카이브",
+        "spot:exhibit-mind-illustrations": "지식관리 일러스트 갤러리",
+        "spot:board-mind": "생각 지도 퀴즈 리더보드",
+        "item:constellation-mobile": "별자리 모빌",
+        "item:rug": "러그",
+        "item:chair": "의자",
+        "item:drawers9": "아홉 칸 서랍장",
+        "item:cork-board": "코르크 보드",
+        "item:book-wall": "책 벽",
+        "item:armchair": "안락의자",
+        "item:floor-lamp": "스탠드 조명",
+        "item:plant": "화분",
+        "view": "밤에서 새벽으로 이어지는 지식 별자리와 수묵 능선"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "1b7febae8ca3d8dc",
+          "items": [
+            "base:look",
+            "base:windows",
+            "game:brain",
+            "spot:exhibit-mind-jisan",
+            "spot:exhibit-mind-lectures",
+            "spot:exhibit-mind-illustrations",
+            "spot:board-mind",
+            "item:constellation-mobile",
+            "item:rug",
+            "item:chair",
+            "item:drawers9",
+            "item:cork-board",
+            "item:book-wall",
+            "item:armchair",
+            "item:floor-lamp",
+            "item:plant",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "study": {
+      "names": {
+        "base:look": "한지 회벽과 청자 비색 하단·창틀",
+        "base:windows": "창 1개",
+        "base:light-pattern": "바닥의 빛 무늬",
+        "base:light-shaft": "비스듬한 빛줄기",
+        "base:pendant": "펜던트 조명",
+        "game:poetry": "문장의 주인을 찾아라",
+        "game:calligraphy": "글씨의 주인을 찾아라",
+        "game:sentences": "문장 걸어 두기",
+        "spot:exhibit-study-walnut": "청자 비색 선반 & 호두 오브제",
+        "spot:board-study": "문장 퍼즐 리더보드",
+        "item:round-rug": "둥근 러그",
+        "item:window-seat": "창가 좌석",
+        "item:sheer-curtain": "얇은 커튼",
+        "item:chair": "의자",
+        "item:plant": "화분",
+        "view": "청자 빛 안개 언덕과 오후 햇살, 종이 편지 새"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "18085f39aa30d0b9",
+          "items": [
+            "base:look",
+            "base:windows",
+            "base:light-pattern",
+            "base:light-shaft",
+            "base:pendant",
+            "game:poetry",
+            "game:calligraphy",
+            "game:sentences",
+            "spot:exhibit-study-walnut",
+            "spot:board-study",
+            "item:round-rug",
+            "item:window-seat",
+            "item:sheer-curtain",
+            "item:chair",
+            "item:plant",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "guest": {
+      "names": {
+        "base:look": "차분한 리넨 베이지 벽과 원목 몰딩",
+        "base:windows": "창 1개",
+        "base:pendant": "펜던트 조명",
+        "spot:exhibit-guest-welcome": "손님맞이 다기 세트 & 안내첩",
+        "item:rug": "러그",
+        "item:bed": "침대",
+        "item:side-table": "협탁",
+        "item:bench": "벤치",
+        "item:sheer-curtain": "얇은 커튼",
+        "item:wardrobe": "옷장",
+        "item:chair": "의자",
+        "item:wall-frames": "벽 액자",
+        "item:plant": "화분",
+        "view": "달빛 소나무 정원과 돌등 불빛"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "69f003844aa3a3c3",
+          "items": [
+            "base:look",
+            "base:windows",
+            "base:pendant",
+            "spot:exhibit-guest-welcome",
+            "item:rug",
+            "item:bed",
+            "item:side-table",
+            "item:bench",
+            "item:sheer-curtain",
+            "item:wardrobe",
+            "item:chair",
+            "item:wall-frames",
+            "item:plant",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "garage": {
+      "names": {
+        "base:look": "노출 적벽돌 벽과 다크 에폭시 바닥",
+        "base:windows": "창 3개",
+        "base:garage-bay-lines": "주차 라인",
+        "base:garage-track-light": "트랙 조명",
+        "base:pendant": "펜던트 조명",
+        "spot:exhibit-garage-grenadier": "이네오스 그레나디어 · 스타링크 이동식 작전 본부",
+        "spot:exhibit-garage-cla45": "메르세데스-AMG CLA 45 · 퍼포먼스 쿠페",
+        "spot:exhibit-garage-harness": "멀티디바이스 AI 하네스 & 장비 설계 본부",
+        "spot:exhibit-garage-tiguan": "구매 계획 도면(X3 취소 → 티구안 확정!) & 다이캐스트",
+        "item:mcc-field-cart": "필드 카트",
+        "item:stool": "스툴",
+        "item:pegboard": "타공판",
+        "item:tool-cabinet": "공구 캐비닛",
+        "item:blueprint-wall": "도면 벽",
+        "item:box-shelf": "상자 선반",
+        "item:bicycle": "자전거",
+        "view": "새벽 알파인 능선 도로와 위성 행렬"
+      },
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "70dc7701f9686169",
+          "items": [
+            "base:look",
+            "base:windows",
+            "base:garage-bay-lines",
+            "base:garage-track-light",
+            "base:pendant",
+            "spot:exhibit-garage-grenadier",
+            "spot:exhibit-garage-cla45",
+            "spot:exhibit-garage-harness",
+            "spot:exhibit-garage-tiguan",
+            "item:mcc-field-cart",
+            "item:stool",
+            "item:pegboard",
+            "item:tool-cabinet",
+            "item:blueprint-wall",
+            "item:box-shelf",
+            "item:bicycle",
+            "view"
+          ],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    },
+    "spare": {
+      "names": {},
+      "history": [
+        {
+          "version": "0.10.0",
+          "at": "2026-11-14T04:34:13.625Z",
+          "hash": "3b799b2e9aa0db96",
+          "items": [],
+          "added": [],
+          "removed": [],
+          "first": true
+        }
+      ]
+    }
+  }
+}

@@ -8,8 +8,9 @@ import { tuneWorld } from './tune';
 import type { Box, Hotspot, HouseWorld, Level, Physics, Portal } from './types';
 
 export type NavPoint = { x: number; z: number; y: number; level: Level };
+// kind의 person은 접속자 목록에서 고른 사람 옆 자리다(이 파일의 갈 곳 목록에는 나오지 않는다)
 export type Destination = {
-  id: string; title: string; kind: Hotspot['kind'] | 'portal'; level: Level; x: number; z: number; yaw: number; slug?: string;
+  id: string; title: string; kind: Hotspot['kind'] | 'portal' | 'person'; level: Level; x: number; z: number; yaw: number; slug?: string;
 };
 
 /** 격자 한 칸(미터) */

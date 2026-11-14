@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { AccountPopover } from '@/components/AccountPopover';
 import { LangLink } from '@/components/LangAttrs';
 import { T } from '@/components/i18n/T';
-import { ROLE_LABEL, ROLE_LABEL_EN, type Role } from '@/lib/access';
+import { ROLE_LABEL, ROLE_LABEL_EN, canSee, type Role } from '@/lib/access';
 import { getViewer } from '@/lib/viewer';
 
 export async function ViewerChip() {
@@ -35,6 +35,14 @@ export function AccountMenu({ v }: { v: { name: string | null; role: Role } }) {
         <Link className="acct-item" href="/avatar"><T ko="내 캐릭터 꾸미기" en="Dress up my character" /></Link>
         <Link className="acct-item" href="/gallery"><T ko="내 갤러리 · 사진첩" en="My gallery and album" /></Link>
       </div>
+
+      {/* 가족(집주인 포함)에게만: 방마다 지금 놓인 것에 의견을 남기는 곳 */}
+      {canSee(v.role, 'family') ? (
+        <div className="acct-group">
+          <span className="acct-group-label"><T ko="가족" en="Family" /></span>
+          <Link className="acct-item" href="/voice"><T ko="방 의견 남기기" en="Room feedback" /></Link>
+        </div>
+      ) : null}
 
       {v.role === 'admin' ? (
         <div className="acct-group acct-admin-group">
