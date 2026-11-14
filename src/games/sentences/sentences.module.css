@@ -4,7 +4,9 @@
   box-sizing: border-box;
   height: 100%;
   min-height: 100%;
-  overflow: auto;
+  /* 기울인 빛 장식이 오른쪽 밖으로 나가 있어도 화면이 옆으로 밀리지 않게, 세로로만 스크롤한다 */
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   background: var(--paper-2);
   color: var(--ink);
@@ -67,7 +69,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px max(12px, env(safe-area-inset-left)) 10px max(12px, env(safe-area-inset-right));
+  /* 화면 가장자리의 안전 영역은 놀이 칸(.game-stage-inner)이 이미 비워 둔다 */
+  padding: 10px 12px;
   background: color-mix(in srgb, var(--paper-2) 88%, transparent);
   backdrop-filter: blur(6px);
 }
@@ -119,13 +122,21 @@
   gap: 10px;
   align-items: center;
 }
+/* 단추 꼴 링크(로그인·수첩으로 가는 길). 글 속 링크 색·밑줄 규칙(.root a)보다 앞서야 한다 */
+.root a.btn,
+.root a.btnMain {
+  align-self: flex-start;
+  text-decoration: none;
+}
+.root a.btn { color: var(--ink); }
+.root a.btnMain { color: var(--roof-on); }
 
 .main {
   position: relative;
   z-index: 1;
   width: min(760px, 100%);
   margin: 0 auto;
-  padding: 8px 16px calc(32px + env(safe-area-inset-bottom));
+  padding: 8px 16px 32px;
 }
 .title {
   margin: 8px 0 4px;
@@ -152,7 +163,8 @@
   border: 1px solid var(--line-2);
   border-radius: 999px;
   color: var(--ink-2);
-  font-size: 0.8em;
+  /* 줄인 글자(0.85em) 안에서 또 줄면 11px대가 된다: 13px 아래로는 내려가지 않게 */
+  font-size: max(13px, 0.8em);
 }
 
 .cheer {
@@ -461,11 +473,27 @@
 .puzzle[data-hint] .piece > span:last-child {
   background: color-mix(in srgb, var(--paper) 78%, transparent);
 }
+/* 차례 점: 조각과 빈 자리에 같은 수만큼(글·숫자를 몰라도 점 수로 맞춘다) */
 .dots {
-  color: var(--roof);
-  font-size: 0.7em;
-  letter-spacing: 2px;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
   line-height: 1;
+}
+.dots i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--roof);
+  box-shadow: 0 0 0 2px var(--paper);
+}
+.root[data-coarse] .dots i {
+  width: 14px;
+  height: 14px;
+}
+.empty .dots i {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--ink-3);
 }
 .status {
   min-height: 1.6em;

@@ -2,13 +2,14 @@
 // 3판 짝 잇기: 하위 서랍(예: 책 노트, 프롬프트, 강의) 여섯 장을 위 서랍과 실로 잇는다.
 // 왼쪽 카드를 누르고 오른쪽 서랍을 누르거나, 카드를 서랍으로 끌어다 놓는다. 서랍 하나에 카드 하나.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLang, useTr } from '@/components/i18n/useLang';
 import type { RoundProps } from './BrainGame';
 import type { Card, DrawerNo } from './bank';
 import { beginDrag, wasDragged } from './drag';
 import { countTrue, gradePairs } from './logic';
 import { Icon } from './pictures';
 import { usePlacement } from './place';
-import { DrawerFace, drawerOf } from './RoundDrawers';
+import { DrawerFace, drawerEn, drawerOf } from './RoundDrawers';
 import s from './brain.module.css';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -21,6 +22,8 @@ export function RoundPairs({ cards, parents, play, onDone }: RoundProps & { card
   const heading = useRef<HTMLHeadingElement>(null);
   const nextBtn = useRef<HTMLButtonElement>(null);
   const full = cards.every((c) => link.at[c.id] !== undefined);
+  const en = useLang() === 'en';
+  const tr = useTr();
 
   useEffect(() => {
     heading.current?.focus();
@@ -81,12 +84,17 @@ export function RoundPairs({ cards, parents, play, onDone }: RoundProps & { card
   return (
     <section className={s.round} aria-labelledby="brain-r3-q">
       <h3 id="brain-r3-q" ref={heading} tabIndex={-1} className={s.roundTitle}>
-        하위 서랍을 위 서랍과 이어 보세요
+        {tr('하위 서랍을 위 서랍과 이어 보세요', 'Link each small drawer to its big drawer')}
       </h3>
-      <p className={s.prompt}>왼쪽 카드를 누르고 오른쪽 서랍을 누르거나, 서랍으로 끌어다 놓아요. 서랍 하나에 카드 하나씩.</p>
+      <p className={s.prompt}>
+        {tr(
+          '왼쪽 카드를 누르고 오른쪽 서랍을 누르거나, 서랍으로 끌어다 놓아요. 서랍 하나에 카드 하나씩.',
+          'Tap a card on the left and then a drawer on the right, or drag it to a drawer. One card per drawer.',
+        )}
+      </p>
       <div className={s.pairs} ref={wrap}>
         <svg ref={svg} className={s.threads} aria-hidden="true" focusable="false" />
-        <ul className={s.pairCol} aria-label="하위 서랍">
+        <ul className={s.pairCol} aria-label={tr('하위 서랍', 'Small drawers')}>
           {cards.map((c, k) => {
             const slot = link.at[c.id];
             const mark = marks ? (marks[k] ? 'right' : 'wrong') : undefined;
@@ -101,7 +109,12 @@ export function RoundPairs({ cards, parents, play, onDone }: RoundProps & { card
                   data-state={mark}
                   aria-pressed={link.sel === c.id}
                   disabled={!!marks}
-                  aria-label={`${c.label}${slot ? `, ${drawerOf(Number(slot)).code} ${drawerOf(Number(slot)).name} 서랍에 이음` : ''}${mark ? (mark === 'right' ? ', 맞음' : ', 틀림') : ''}`}
+                  aria-label={
+                    en
+                      ? `${c.label}${slot ? `, linked to drawer ${drawerOf(Number(slot)).code} ${drawerEn(drawerOf(Number(slot)))}` : ''}${mark ? (mark === 'right' ? ', correct' : ', wrong') : ''}`
+                      : `${c.label}${slot ? `, ${drawerOf(Number(slot)).code} ${drawerOf(Number(slot)).name} 서랍에 이음` : ''}${mark ? (mark === 'right' ? ', 맞음' : ', 틀림') : ''}`
+                  }
+                  lang={en ? 'ko' : undefined}
                   onPointerDown={(e) =>
                     !marks &&
                     beginDrag(e, (drop) => {
@@ -125,7 +138,7 @@ export function RoundPairs({ cards, parents, play, onDone }: RoundProps & { card
             );
           })}
         </ul>
-        <ul className={s.pairCol} aria-label="위 서랍">
+        <ul className={s.pairCol} aria-label={tr('위 서랍', 'Big drawers')}>
           {parents.map((no) => {
             const d = drawerOf(no);
             const key = String(no);
@@ -139,7 +152,7 @@ export function RoundPairs({ cards, parents, play, onDone }: RoundProps & { card
                   data-drop={key}
                   data-ready={link.sel && !marks ? '' : undefined}
                   disabled={!!marks}
-                  aria-label={`${d.code} ${d.name} 서랍${card ? `, ${card.label} 이어짐` : ''}`}
+                  aria-label={en ? `Drawer ${d.code} ${drawerEn(d)}${card ? ', linked' : ''}` : `${d.code} ${d.name} 서랍${card ? `, ${card.label} 이어짐` : ''}`}
                   onClick={() => {
                     const r = link.tapSlot(key);
                     if (r === 'put') play('link');
@@ -156,26 +169,26 @@ export function RoundPairs({ cards, parents, play, onDone }: RoundProps & { card
       <div aria-live="polite">
         {!marks ? (
           <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={check} disabled={!full}>
-            확인하기
+            {tr('확인하기', 'Check')}
           </button>
         ) : (
           <div className={s.answer} data-state={got === cards.length ? 'right' : 'wrong'}>
             <p className={s.answerHead}>
               <Icon name={got === cards.length ? 'check' : 'cross'} />
-              {got === cards.length ? '여섯 짝 다 맞혔어요!' : `여섯 짝 중 ${got}개 맞았어요.`}
+              {got === cards.length ? tr('여섯 짝 다 맞혔어요!', 'All six pairs right!') : tr(`여섯 짝 중 ${got}개 맞았어요.`, `${got} of six pairs right.`)}
             </p>
             <ul className={s.explain}>
               {cards.map((c, k) => {
                 const d = drawerOf(c.drawer);
                 return (
                   <li key={c.id} data-state={marks[k] ? 'right' : 'wrong'}>
-                    <b>{c.label}</b> → {d.code} {d.name} <span className={s.code}>({c.code})</span>. {c.why}
+                    <b lang="ko">{c.label}</b> → {d.code} {en ? drawerEn(d) : d.name} <span className={s.code}>({c.code})</span>. <span lang="ko">{c.why}</span>
                   </li>
                 );
               })}
             </ul>
             <button ref={nextBtn} type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={() => onDone(got)}>
-              결과 보기 <Icon name="next" />
+              {tr('결과 보기', 'See results')} <Icon name="next" />
             </button>
           </div>
         )}

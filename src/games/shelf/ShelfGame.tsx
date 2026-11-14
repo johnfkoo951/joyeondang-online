@@ -1,7 +1,11 @@
 // 좋아하는 것 선반: 고르기 칸의 소품을 3단 선반 12칸에 탭(골라서 칸 누르기)이나 끌어 놓아 꾸민다.
 // 글자를 몰라도 그림과 소리만으로 끝까지 할 수 있고, 키보드만으로도(방향키·Enter) 할 수 있다.
+// 목표(3개 이상)는 별 세 개가 차오르는 것으로 보이고, 다 차면 「다 꾸몄어요」가 두근거린다.
+// 「다 꾸몄어요」로 마친 순간부터 덮개 화면에 결과를 미리 알린다(ctx.report).
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as RKeyboardEvent, type PointerEvent as RPointerEvent } from 'react';
-import type { GameContext } from '../types';
+import { useLang, useTr } from '@/components/i18n/useLang';
+import type { Lang } from '@/lib/i18n';
+import type { GameContext, GameResult } from '../types';
 import { ItemArt } from './art';
 import { ITEMS } from './items';
 import {
@@ -12,6 +16,12 @@ import { createSound, type ShelfSound, type Sound } from './sound';
 import s from './shelf.module.css';
 
 const BY_ID = new Map(ITEMS.map((it) => [it.id, it]));
+/** 아래 줄 알림의 열쇠(보일 때 지금 말로 고른다): 모두 내리기 한 번 더, 먼저 고르기, 더 올리기 */
+type Note = '' | 'arm' | 'pickFirst' | 'needMore';
+const itemName = (id: string, lang: Lang) => {
+  const it = BY_ID.get(id);
+  return it ? (lang === 'en' ? it.en : it.name) : '';
+};
 type Held = { from: 'tray' | number; id: string } | null;
 type Down = { id: string; from: 'tray' | number; x: number; y: number; pid: number; moved: boolean };
 
@@ -30,6 +40,12 @@ function writeShelf(sh: Shelf): void {
   }
 }
 
+/** 선반 결과(점수 = 올린 소품 수). 단추·끌기 처리 안에서만 부른다 */
+function shelfResult(sh: Shelf, done: boolean, start: number): GameResult {
+  const k = placedCount(sh);
+  return { cleared: done, score: k, ms: Math.round(performance.now() - start), detail: { items: k } };
+}
+
 const Art = ({ id }: { id: string }) => {
   const it = BY_ID.get(id);
   return it ? <ItemArt shape={it.shape} color={it.color} /> : null;
@@ -39,11 +55,17 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
   const [shelf, setShelf] = useState<Shelf>(readShelf);
   const [held, setHeld] = useState<Held>(null);
   const [muted, setMuted] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [note, setNote] = useState('');
+  /** 「다 꾸몄어요」를 누른 때(사진 카드의 날짜). 날짜 글은 보일 때 지금 말로 만든다 */
+  const [photo, setPhoto] = useState<Date | null>(null);
+  const [note, setNote] = useState<Note>('');
+  const lang = useLang();
+  const tr = useTr();
   const [drag, setDrag] = useState<string | null>(null);
   const [fs, setFs] = useState(0);
   const [ft, setFt] = useState(0);
+  // 「모두 내리기」는 한 번 더 눌러야 내린다(실수로 다 내리지 않게). 손가락 기기에서는 숨긴다
+  const [armed, setArmed] = useState(false);
+  const [cleared, setCleared] = useState(false);
   const order = useMemo(() => trayOrder(ITEMS.map((i) => i.id), ctx.seed), [ctx.seed]);
   const root = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLDivElement>(null);
@@ -57,6 +79,14 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
       sound.current = null;
     };
   }, []);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => {
+      setArmed(false);
+      setNote((x) => (x === 'arm' ? '' : x));
+    }, 3500);
+    return () => window.clearTimeout(t);
+  }, [armed]);
 
   const onShelf = new Set(shelf.filter((x): x is string => !!x));
   const tray = order.filter((id) => !onShelf.has(id));
@@ -68,10 +98,14 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
     if (!sound.current) sound.current = createSound();
     sound.current.play(k, slot);
   };
+  const resultOf = (sh: Shelf, done: boolean): GameResult => shelfResult(sh, done, live.current.start);
   const commit = (next: Shelf) => {
     setShelf(next);
     writeShelf(next);
     live.current.changed = true;
+    setArmed(false);
+    // 한 번 마쳤으면 더 꾸밀 때마다 바뀐 결과를 알린다
+    if (live.current.cleared) ctx.report?.(resultOf(next, true));
   };
   const focusEl = (sel: string) => requestAnimationFrame(() => root.current?.querySelector<HTMLElement>(sel)?.focus());
 
@@ -101,7 +135,7 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
     if (id) {
       setHeld({ from: i, id });
       play('pick');
-    } else setNote('먼저 소품을 하나 골라요.');
+    } else setNote('pickFirst');
   };
   const putBack = () => {
     if (held && held.from !== 'tray') {
@@ -111,22 +145,30 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
     setHeld(null);
   };
   const clearAll = () => {
+    if (!armed) {
+      setArmed(true);
+      setNote('arm');
+      return;
+    }
     commit(emptyShelf());
     setHeld(null);
+    setNote('');
     play('remove');
   };
   const finishDecor = () => {
-    if (!canFinish(shelf)) return setNote(`소품을 ${MIN_TO_FINISH}개 이상 올려 주세요.`);
+    if (!canFinish(shelf)) return setNote('needMore');
     setHeld(null);
     play('done');
     live.current.cleared = true;
-    setPhoto(new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date()));
+    setCleared(true);
+    ctx.report?.(resultOf(shelf, true));
+    setPhoto(new Date());
   };
-  const exit = (cleared: boolean) => {
+  const exit = (finished: boolean) => {
     const l = live.current;
-    const done = cleared || l.cleared; // 한 번 「다 꾸몄어요」를 했으면 더 꾸미다 그만해도 다 꾸민 것
+    const done = finished || l.cleared; // 한 번 「다 꾸몄어요」를 했으면 더 꾸미다 그만해도 다 꾸민 것
     if (!done && !l.changed) return ctx.onExit();
-    ctx.onExit({ cleared: done, score: n, ms: Math.round(performance.now() - l.start), detail: { items: n } });
+    ctx.onExit(resultOf(shelf, done));
   };
 
   // 끌어 놓기: 8px 넘게 움직이면 끌기, 아니면 그냥 탭(click이 처리)
@@ -187,7 +229,7 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
 
   // 방향키로 칸 사이를 옮긴다(무리마다 Tab 자리 하나)
   const rove = (e: RKeyboardEvent<HTMLElement>, cur: number, count: number, cols: number, go: (i: number) => void) => {
-    if (e.nativeEvent.isComposing || count === 0) return;
+    if (e.nativeEvent.isComposing || e.keyCode === 229 || count === 0) return;
     const step: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols };
     let i = cur;
     if (e.key in step) i = Math.max(0, Math.min(count - 1, cur + step[e.key]));
@@ -210,7 +252,15 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
     focusEl(`[data-slot="${i}"]`);
   };
 
-  const heldName = held ? BY_ID.get(held.id)?.name ?? '' : '';
+  const heldName = held ? itemName(held.id, lang) : '';
+  const noteText =
+    note === 'arm'
+      ? tr('한 번 더 누르면 모두 내려요.', 'Press once more to take everything down.')
+      : note === 'pickFirst'
+        ? tr('먼저 소품을 하나 골라요.', 'First pick something.')
+        : note === 'needMore'
+          ? tr(`소품을 ${MIN_TO_FINISH}개 이상 올려 주세요.`, `Put at least ${MIN_TO_FINISH} things on the shelf.`)
+          : '';
   return (
     <div
       ref={root}
@@ -225,30 +275,40 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
       <div className={s.top}>
         <p className={s.count} aria-live="polite">
           <span className={s.countArt} aria-hidden="true" />
-          <span className={s.sr}>선반에 올린 소품</span> {n} / {SLOTS}
+          <span className={s.sr}>{tr('선반에 올린 소품', 'Things on the shelf')}</span> {n} / {SLOTS}
+          <Goal n={n} />
         </p>
         <div className={s.tools}>
           <button type="button" className={s.tool} onClick={() => setMuted((m) => !m)} aria-pressed={muted}>
             <SoundIcon off={muted} />
-            <span className={s.toolText}>{muted ? '소리 켜기' : '소리 끄기'}</span>
+            <span className={s.toolText}>{muted ? tr('소리 켜기', 'Unmute') : tr('소리 끄기', 'Mute')}</span>
           </button>
-          <button type="button" className={s.tool} onClick={clearAll} disabled={n === 0}>
-            모두 내리기
-          </button>
+          {ctx.coarse ? null : (
+            <button type="button" className={s.tool} onClick={clearAll} disabled={n === 0} data-armed={armed ? '' : undefined} aria-label={armed ? tr('모두 내리기: 한 번 더 누르면 모두 내려요', 'Clear shelf: press once more to take everything down') : tr('모두 내리기', 'Clear shelf')}>
+              <DownIcon />
+              <span className={s.toolText}>{armed ? tr('한 번 더 누르면 내려요', 'Press again to clear') : tr('모두 내리기', 'Clear shelf')}</span>
+            </button>
+          )}
           <button type="button" className={s.tool} onClick={() => exit(false)}>
-            그만하기
+            <DoorIcon />
+            <span>{tr('그만하기', 'Quit')}</span>
           </button>
         </div>
       </div>
       <div className={s.main}>
-        <section className={s.shelfWrap} aria-label="선반">
-          <div className={s.shelf} role="group" aria-label="선반 12칸. 방향키로 옮기고 Enter로 놓거나 들어요" onKeyDown={(e) => rove(e, fs, SLOTS, COLS, toSlot)}>
+        <section className={s.shelfWrap} aria-label={tr('선반', 'Shelf')}>
+          <div
+            className={s.shelf}
+            role="group"
+            aria-label={tr('선반 12칸. 방향키로 옮기고 Enter로 놓거나 들어요', 'Shelf with 12 spots. Move with the arrow keys, and press Enter to place or pick up')}
+            onKeyDown={(e) => rove(e, fs, SLOTS, COLS, toSlot)}
+          >
             {Array.from({ length: ROWS }, (_, row) => (
               <div key={row} className={s.tier}>
                 {Array.from({ length: COLS }, (_, col) => {
                   const i = row * COLS + col;
                   const id = shelf[i];
-                  const name = id ? BY_ID.get(id)?.name : null;
+                  const name = id ? itemName(id, lang) : null;
                   const mine = held?.from === i;
                   return (
                     <button
@@ -259,7 +319,7 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
                       data-filled={id ? '' : undefined}
                       data-held={mine ? '' : undefined}
                       tabIndex={i === fs ? 0 : -1}
-                      aria-label={`${slotName(i)}, ${name ?? '빈칸'}${mine ? ', 들고 있음' : ''}`}
+                      aria-label={`${slotName(i, lang)}, ${name ?? tr('빈칸', 'empty')}${mine ? tr(', 들고 있음', ', holding') : ''}`}
                       onFocus={() => setFs(i)}
                       onClick={(e) => clicked() && tapSlot(i, e.detail === 0)}
                       onPointerDown={id ? (e) => onDown(e, id, i) : undefined}
@@ -272,12 +332,12 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
             ))}
           </div>
         </section>
-        <section className={s.trayWrap} data-tray="" aria-label="고르기">
+        <section className={s.trayWrap} data-tray="" aria-label={tr('고르기', 'Pick')}>
           <div className={s.tray}>
             <div
               className={s.trayGrid}
               role="group"
-              aria-label="소품 고르기. 방향키로 옮기고 Enter로 골라요"
+              aria-label={tr('소품 고르기. 방향키로 옮기고 Enter로 골라요', 'Pick a thing. Move with the arrow keys and press Enter to choose')}
               style={{ '--cols': Math.max(1, Math.ceil(tray.length / 2)) } as CSSProperties}
               onKeyDown={(e) => rove(e, ftc, tray.length, trayCols(), toTray)}
             >
@@ -294,11 +354,11 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
                   onPointerDown={(e) => onDown(e, id, 'tray')}
                 >
                   <Art id={id} />
-                  <span className={s.itemName}>{BY_ID.get(id)?.name}</span>
+                  <span className={s.itemName}>{itemName(id, lang)}</span>
                 </button>
               ))}
             </div>
-            {tray.length === 0 ? <p className={s.hintLine}>모두 선반에 올렸어요</p> : null}
+            {tray.length === 0 ? <p className={s.hintLine}>{tr('모두 선반에 올렸어요', 'Everything is on the shelf')}</p> : null}
           </div>
         </section>
       </div>
@@ -306,32 +366,36 @@ export function ShelfGame({ ctx }: { ctx: GameContext }) {
         <div className={s.status}>
           {held && held.from !== 'tray' ? (
             <button type="button" className={s.btn} onClick={putBack}>
-              <DownIcon /> {heldName} 내리기
+              <DownIcon /> {tr(`${heldName} 내리기`, `Take down: ${heldName}`)}
             </button>
           ) : (
             <p className={s.hintLine} role="status">
-              <HandIcon /> {note || (held ? `${heldName}: 선반 칸을 눌러요` : '좋아하는 것을 골라요')}
+              <HandIcon /> {noteText || (held ? tr(`${heldName}: 선반 칸을 눌러요`, `${heldName}: tap a shelf spot`) : tr('좋아하는 것을 골라요', 'Pick something you like'))}
             </p>
           )}
         </div>
-        <button type="button" className={s.primary} onClick={finishDecor} aria-disabled={!canFinish(shelf)}>
-          <CheckIcon /> 다 꾸몄어요
+        <button type="button" className={s.primary} onClick={finishDecor} aria-disabled={!canFinish(shelf)} data-ready={canFinish(shelf) && !cleared ? '' : undefined}>
+          <CheckIcon /> {tr('다 꾸몄어요', 'All done')}
         </button>
       </div>
       <div ref={ghost} className={s.ghost} data-on={drag ? '' : undefined} aria-hidden="true">
         {drag ? <Art id={drag} /> : null}
       </div>
-      {photo ? <Photo shelf={shelf} date={photo} onDone={() => exit(true)} onMore={() => setPhoto(null)} /> : null}
+      {photo ? <Photo shelf={shelf} at={photo} onDone={() => exit(true)} onMore={() => setPhoto(null)} /> : null}
     </div>
   );
 }
 
 /** 「다 꾸몄어요」 뒤의 선반 사진 카드 */
-function Photo({ shelf, date, onDone, onMore }: { shelf: Shelf; date: string; onDone: () => void; onMore: () => void }) {
+function Photo({ shelf, at, onDone, onMore }: { shelf: Shelf; at: Date; onDone: () => void; onMore: () => void }) {
   const n = placedCount(shelf);
+  const lang = useLang();
+  const tr = useTr();
+  const date = new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'ko-KR', { year: 'numeric', month: 'long', day: 'numeric' }).format(at);
+  const things = n === 1 ? '1 thing' : `${n} things`;
   return (
     <div className={s.photoBack}>
-      <section className={s.photo} role="group" aria-label={`나의 선반 사진, 소품 ${n}개`}>
+      <section className={s.photo} role="group" aria-label={tr(`나의 선반 사진, 소품 ${n}개`, `Photo of my shelf, ${things}`)}>
         <div className={s.photoPic} aria-hidden="true">
           {Array.from({ length: ROWS }, (_, row) => (
             <div key={row} className={s.tier}>
@@ -347,17 +411,15 @@ function Photo({ shelf, date, onDone, onMore }: { shelf: Shelf; date: string; on
           ))}
         </div>
         <p className={s.caption}>
-          <strong>나의 선반</strong>
-          <span>
-            {date} · 소품 {n}개
-          </span>
+          <strong>{tr('나의 선반', 'My shelf')}</strong>
+          <span>{tr(`${date} · 소품 ${n}개`, `${date} · ${things}`)}</span>
         </p>
         <div className={s.actions}>
           <button type="button" className={s.primary} onClick={onDone} autoFocus>
-            <CheckIcon /> 마치기
+            <CheckIcon /> {tr('마치기', 'Finish')}
           </button>
           <button type="button" className={s.btn} onClick={onMore}>
-            더 꾸미기
+            <HandIcon /> {tr('더 꾸미기', 'Decorate more')}
           </button>
         </div>
       </section>
@@ -384,6 +446,24 @@ const DownIcon = () => (
     <path d="M12 4v13M6 11l6 6 6-6M5 20h14" />
   </svg>
 );
+const DoorIcon = () => (
+  <svg {...svgBase} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 4H6v16h8M10 12h10M17 9l3 3-3 3" />
+  </svg>
+);
+/** 목표: 소품 3개(MIN_TO_FINISH)를 별 세 개로. 올릴 때마다 하나씩 찬다 */
+function Goal({ n }: { n: number }) {
+  const tr = useTr();
+  return (
+    <span className={s.goal} role="img" aria-label={tr(`목표 ${MIN_TO_FINISH}개 중 ${Math.min(n, MIN_TO_FINISH)}개`, `Goal: ${Math.min(n, MIN_TO_FINISH)} of ${MIN_TO_FINISH}`)}>
+      {Array.from({ length: MIN_TO_FINISH }, (_, k) => (
+        <svg key={k} {...svgBase} viewBox="0 0 24 24" data-on={k < n ? '' : undefined}>
+          <path d="M12 3.2l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-2.9-5.4 2.9 1.1-6-4.5-4.2 6.1-.8z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
 const CheckIcon = () => (
   <svg {...svgBase} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
     <path d="M5 12.5l4.5 4.5L19 7.5" />

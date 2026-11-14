@@ -7,13 +7,14 @@ import type { CharacterLook } from '@/walk/look';
 //   base64url(JSON payload) + '.' + base64url(HMAC-SHA256(GAME_TOKEN_SECRET, 앞의 base64url 글자 그대로))
 // payload = { sub, name, color, role, exp, look? }, exp는 유닉스 초. look은 프로필의 캐릭터 겉모습(cleanLook 결과).
 // 손님 확인은 부르는 쪽(app/api/game-token)이 먼저 한다.
+// role 'observer'는 관전자(관리자·가족만, /api/game-token?observe=1): 게임 서버가 사람 수에 세지 않고 남에게 보이지 않게 하며 받기만 하게 한다.
 
-export type GameRole = Extract<Role, 'guest' | 'family' | 'admin'>;
+export type GameRole = Extract<Role, 'guest' | 'family' | 'admin'> | 'observer';
 export type GameTokenPayload = { sub: string; name: string; color: string; role: GameRole; exp: number; look?: CharacterLook };
 
 /** 출입증 수명(초). 걷기 화면은 만료 1분 전에 새로 받는다 */
 export const GAME_TOKEN_TTL = 600;
-const ROLES: readonly string[] = ['guest', 'family', 'admin'];
+const ROLES: readonly string[] = ['guest', 'family', 'admin', 'observer'];
 
 const b64url = (buf: Buffer | string) => Buffer.from(buf).toString('base64url');
 const mac = (body: string, secret: string) => createHmac('sha256', secret).update(body).digest();
@@ -41,6 +42,17 @@ export function verifyGameToken(token: string, secret: string, nowMs: number = D
   } catch {
     return null;
   }
+}
+
+/**
+ * 사진 겉모습 증표. 붙어 있는 동안 사진 캐릭터로 바꾸면 출입증에는 옛 겉모습이 실려 있으므로,
+ * 「이 사람(sub)의 그림(url)이 맞다」를 따로 서명해 겉모습 메시지에 붙인다(game-server/src/token.ts verifyLookProof와 짝).
+ *   `${exp}.` + base64url(HMAC-SHA256(GAME_TOKEN_SECRET, `look:${sub}:${url}:${exp}`))
+ * 내 그림인지는 부르는 쪽(app/api/game-token/look)이 먼저 확인한다.
+ */
+export function signLookProof(sub: string, url: string, exp: number, secret: string): string {
+  if (secret.length < 16) throw new Error('GAME_TOKEN_SECRET이 너무 짧아요');
+  return `${exp}.${b64url(mac(`look:${sub}:${url}:${exp}`, secret))}`;
 }
 
 /**

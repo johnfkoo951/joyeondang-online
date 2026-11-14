@@ -1,0 +1,40 @@
+/* 관리 화면의 행사 초대 코드 칸 */
+.form { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; }
+.field { display: grid; gap: 4px; font-size: 0.9em; color: var(--ink-2); }
+.field input[type="text"] { min-width: min(240px, 100%); }
+/* 숫자 칸은 전역 입력 모양(globals.css)에 들어 있지 않아 같은 모양을 준다 */
+.field input[type="number"] {
+  font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line-2); border-radius: 10px;
+  padding: 12px 14px; width: 7.5em;
+}
+
+.made {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+.madeQr { width: 220px; height: 220px; border-radius: 8px; }
+.code {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.6em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.live { font-size: clamp(1.1rem, 2.4vw, 2rem); font-weight: 700; color: var(--pine); }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.row { display: grid; gap: 6px; }
+.row[data-state="revoked"], .row[data-state="ended"] { opacity: 0.7; }
+.rowHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin: 0; }
+.rowMeta { margin: 0; font-size: 0.9em; color: var(--ink-2); }
+
+@media (max-width: 600px) {
+  .made { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .madeQr { width: min(260px, 100%); height: auto; aspect-ratio: 1; }
+}

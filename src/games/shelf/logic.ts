@@ -112,8 +112,9 @@ export function parseShelf(raw: string | null | undefined, validIds: Iterable<st
   return out;
 }
 
-/** 칸 번호 → (단, 칸) 사람 말(위 칸이 1단) */
-export function slotName(slot: number): string {
+/** 칸 번호 → (단, 칸) 사람 말(위 칸이 1단). 영어 화면이면 「Shelf 1, spot 2」 */
+export function slotName(slot: number, lang: 'ko' | 'en' = 'ko'): string {
+  if (lang === 'en') return `Shelf ${Math.floor(slot / COLS) + 1}, spot ${(slot % COLS) + 1}`;
   return `${Math.floor(slot / COLS) + 1}단 ${(slot % COLS) + 1}번째 칸`;
 }
 

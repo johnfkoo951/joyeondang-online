@@ -1,0 +1,58 @@
+/* 발표 화면에 크게 띄우는 행사 초대 QR. 멀리서 찍히게 QR을 화면 높이만큼 키우고, 글자는 뒷줄에서도 읽히게 크게 */
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(16px, 4vw, 64px);
+  padding: clamp(16px, 4vh, 56px) clamp(16px, 4vw, 72px);
+  padding-top: max(clamp(16px, 4vh, 56px), env(safe-area-inset-top));
+  padding-bottom: max(clamp(16px, 4vh, 56px), env(safe-area-inset-bottom));
+  background: var(--paper);
+  color: var(--ink);
+  overflow: auto;
+}
+
+.stageQr {
+  display: block;
+  width: min(84vh, 52vw);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+
+/* 글자 크기를 이 칸의 너비에 맞춘다(코드 열네 글자가 한 줄에 들어가게) */
+.stageText { display: grid; gap: clamp(8px, 2vh, 20px); min-width: 0; width: 100%; container-type: inline-size; }
+.stageText p { margin: 0; }
+.stageLabel { font-size: clamp(1.6rem, 4.6vw, 3.6rem); font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.stageHow { font-size: clamp(1.05rem, 2.3vw, 1.9rem); color: var(--ink-2); }
+.stageLink {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(0.9rem, 1.7vw, 1.4rem);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+/* 코드는 끊지 않는다: 고정폭 열네 글자(4-4-4)는 글자 크기의 약 9배 너비라 칸 너비의 10.5%로 맞춘다 */
+.stageCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(1.2rem, 10.5cqi, 4.2rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.stageClose { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); }
+.key { margin-left: 6px; }
+
+/* 세로 화면(휴대폰, 세워 둔 모니터): 위아래로 */
+@media (orientation: portrait) {
+  .stage { grid-template-columns: minmax(0, 1fr); align-content: center; justify-items: center; text-align: center; }
+  .stageQr { width: min(86vw, 58vh); }
+}
+
+/* 손가락 기기에는 키 이름을 보이지 않는다 */
+@media (hover: none) and (pointer: coarse) {
+  .key { display: none; }
+}

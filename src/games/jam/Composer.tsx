@@ -1,9 +1,11 @@
 // 「두 마디 만들기」: 8분음표 16칸 격자에 블루스 음계 음을 찍고, 워킹 베이스 반주 위에 되풀이해 들어 본다.
 import { useEffect, useRef, useState, type KeyboardEvent as RKeyboardEvent } from 'react';
+import { useLang, useTr } from '@/components/i18n/useLang';
+import type { Lang } from '@/lib/i18n';
 import type { Audio } from './RoundPlay';
-import { IconNote, IconPlay, IconStop } from './icons';
+import { IconCheck, IconNote, IconPlay, IconStop } from './icons';
 import {
-  GRID_CELLS, SCALE, SCALE_NAMES, composeTimeline, emptyGrid, exampleGrid, heardAt, noteCount, slotTime, swingRatio, toggleCell,
+  GRID_CELLS, SCALE, SCALE_NAMES, SCALE_NAMES_EN, composeTimeline, emptyGrid, exampleGrid, heardAt, noteCount, slotTime, swingRatio, toggleCell,
   COMPOSE_BPM, type Grid,
 } from './logic';
 import s from './jam.module.css';
@@ -12,7 +14,19 @@ const ROWS = SCALE.map((_, r) => SCALE.length - 1 - r); // 위가 높은 음
 const BEAT_MARK = ['1', '', '2', '', '3', '', '4', ''];
 
 /** 칸 c의 사람 말 이름(보조기술용) */
-const cellName = (c: number, r: number) => `${Math.floor(c / 8) + 1}마디 ${Math.floor((c % 8) / 2) + 1}박 ${c % 2 ? '뒤' : '앞'} 칸, ${SCALE_NAMES[r]}`;
+const cellName = (c: number, r: number, lang: Lang = 'ko') =>
+  lang === 'en'
+    ? `Bar ${Math.floor(c / 8) + 1}, beat ${Math.floor((c % 8) / 2) + 1} ${c % 2 ? 'off' : 'on'}, ${SCALE_NAMES_EN[r]}`
+    : `${Math.floor(c / 8) + 1}마디 ${Math.floor((c % 8) / 2) + 1}박 ${c % 2 ? '뒤' : '앞'} 칸, ${SCALE_NAMES[r]}`;
+
+/** 아래 줄 알림(열쇠만 두고 보일 때 지금 말로 고른다) */
+type Note = { k: 'example' } | { k: 'empty' } | { k: 'added'; n: number } | null;
+function noteText(note: Note, tr: (ko: string, en: string) => string): string {
+  if (!note) return '';
+  if (note.k === 'example') return tr('예시 가락을 채웠어요. 칸을 눌러 바꿔 보세요.', 'Filled in an example tune. Tap cells to change it.');
+  if (note.k === 'empty') return tr('먼저 칸을 하나 이상 눌러 음을 찍어요.', 'First tap at least one cell to place a note.');
+  return tr(`오늘의 곡에 ${note.n}번째 두 마디를 붙였어요.`, `Added two bars to today’s song (piece ${note.n}).`);
+}
 
 /** 되풀이 재생 중 지금 칸(0~15) */
 function cellAt(pos: number): number {
@@ -36,7 +50,9 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
   const [playing, setPlaying] = useState(false);
   const [col, setCol] = useState(-1);
   const [focus, setFocus] = useState({ c: 0, r: 0 });
-  const [note, setNote] = useState('');
+  const [note, setNote] = useState<Note>(null);
+  const lang = useLang();
+  const tr = useTr();
   const gridRef = useRef(grid);
   const box = useRef<HTMLDivElement>(null);
   const loop = useRef({ raf: 0, audio: null as Audio | null, ex: 0 });
@@ -93,25 +109,25 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
   const example = () => {
     loop.current.ex += 1;
     update(exampleGrid(seed + loop.current.ex * 7919));
-    setNote('예시 가락을 채웠어요. 칸을 눌러 바꿔 보세요.');
+    setNote({ k: 'example' });
   };
   const clear = () => {
     update(emptyGrid());
-    setNote('');
+    setNote(null);
   };
   const add = () => {
     if (noteCount(gridRef.current) === 0) {
-      setNote('먼저 칸을 하나 이상 눌러 음을 찍어요.');
+      setNote({ k: 'empty' });
       return;
     }
     onAdd(gridRef.current);
-    setNote(`오늘의 곡에 ${count + 1}번째 두 마디를 붙였어요.`);
+    setNote({ k: 'added', n: count + 1 });
     update(emptyGrid());
   };
 
   // 방향키로 칸을 옮겨 다닌다(칸 하나만 Tab 자리). Space·Enter는 단추가 직접 누른다
   const onKey = (e: RKeyboardEvent<HTMLDivElement>) => {
-    if (e.nativeEvent.isComposing) return;
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     const d: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
     let { c, r } = focus;
     if (d[e.key]) {
@@ -128,11 +144,17 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
   return (
     <div className={s.compose}>
       <p className={s.lead}>
-        <IconNote /> 칸을 눌러 음을 찍고 들어 봐요. 위로 갈수록 높은 음이에요.
+        <IconNote /> {tr('칸을 눌러 음을 찍고 들어 봐요. 위로 갈수록 높은 음이에요.', 'Tap cells to place notes, then listen. Higher rows are higher notes.')}
       </p>
-      <div ref={box} className={s.bars} role="group" aria-label="두 마디 격자. 방향키로 옮기고 Space로 찍어요" onKeyDown={onKey}>
+      <div
+        ref={box}
+        className={s.bars}
+        role="group"
+        aria-label={tr('두 마디 격자. 방향키로 옮기고 Space로 찍어요', 'Two-bar grid. Move with the arrow keys and press Space to place a note')}
+        onKeyDown={onKey}
+      >
         {[0, 1].map((bar) => (
-          <div key={bar} className={s.barBlock} aria-label={`${bar + 1}마디`} role="group">
+          <div key={bar} className={s.barBlock} aria-label={tr(`${bar + 1}마디`, `Bar ${bar + 1}`)} role="group">
             <div className={s.beats} aria-hidden="true">
               {BEAT_MARK.map((m, k) => (
                 <span key={k} data-now={col === bar * 8 + k ? '' : undefined}>{m}</span>
@@ -155,7 +177,7 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
                       className={s.cell}
                       tabIndex={focus.c === c && focus.r === r ? 0 : -1}
                       aria-pressed={on}
-                      aria-label={cellName(c, r)}
+                      aria-label={cellName(c, r, lang)}
                       onClick={() => toggle(c, r)}
                     />
                   );
@@ -170,18 +192,18 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
         <div className={s.actions}>
           {playing ? (
             <button type="button" className={s.primary} onClick={stop}>
-              <IconStop /> 멈추기
+              <IconStop /> {tr('멈추기', 'Stop')}
             </button>
           ) : (
             <button type="button" className={s.primary} onClick={play}>
-              <IconPlay /> 들어 보기
+              <IconPlay /> {tr('들어 보기', 'Listen')}
             </button>
           )}
-          <button type="button" className={s.btn} onClick={example}>예시로 채우기</button>
-          <button type="button" className={s.btn} onClick={clear}>모두 지우기</button>
-          <button type="button" className={s.btn} onClick={add}>곡에 붙이기</button>
+          <button type="button" className={s.btn} onClick={example}>{tr('예시로 채우기', 'Fill an example')}</button>
+          <button type="button" className={s.btn} onClick={clear}>{tr('모두 지우기', 'Clear all')}</button>
+          <button type="button" className={s.btn} onClick={add}>{tr('곡에 붙이기', 'Add to song')}</button>
         </div>
-        <p className={s.note} role="status">{note}</p>
+        <p className={s.note} role="status">{noteText(note, tr)}</p>
       </div>
       <div className={s.actions}>
         <button
@@ -193,7 +215,7 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
           }}
           disabled={count === 0}
         >
-          <IconPlay /> 오늘의 곡 ({count})
+          <IconPlay /> {tr(`오늘의 곡 (${count})`, `Today’s song (${count})`)}
         </button>
         <button
           type="button"
@@ -203,7 +225,7 @@ export function Composer({ ensure, seed, count, onAdd, onSong, onFinish }: Props
             onFinish();
           }}
         >
-          다 했어요
+          <IconCheck /> {tr('다 했어요', 'All done')}
         </button>
       </div>
     </div>

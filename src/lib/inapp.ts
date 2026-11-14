@@ -26,6 +26,17 @@ export const INAPP_NAME: Record<Exclude<InApp, null>, string> = {
   webview: '앱 안 브라우저',
 };
 
+/** 화면이 영어일 때의 이름. 「○○ 안에서는」 자리에 그대로 들어가게 쓴다(inside KakaoTalk, inside this app's browser) */
+export const INAPP_NAME_EN: Record<Exclude<InApp, null>, string> = {
+  kakao: 'KakaoTalk',
+  naver: 'the NAVER app',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  line: 'LINE',
+  band: 'BAND',
+  webview: "this app's browser",
+};
+
 /**
  * 바깥 브라우저로 여는 주소. 카카오톡 주소 체계는 공식 기능이 아니어서 언제든 막힐 수 있다
  * (Kakao DevTalk 2025-04, 2025-07). 실패하면 화면의 안내(⋯ → 다른 브라우저로 열기)가 남는다.
@@ -38,4 +49,12 @@ export function escapeUrl(kind: InApp, href: string, ua: string): string | null 
     return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(href)};end`;
   }
   return null;
+}
+
+/** 바깥으로 여는 단추의 글. 카카오톡 주소는 기기의 기본 브라우저로 열리므로 브라우저 이름을 박지 않는다. lang 'en'이면 영어 */
+export function escapeLabel(kind: InApp, ua: string, lang: 'ko' | 'en' = 'ko'): string {
+  const en = lang === 'en';
+  if (kind === 'kakao') return en ? 'Open in your browser' : '바깥 브라우저로 열기';
+  if (/Android/i.test(ua)) return en ? 'Open in Chrome' : 'Chrome에서 열기';
+  return en ? 'Open in Safari' : 'Safari에서 열기';
 }

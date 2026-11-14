@@ -1,10 +1,12 @@
 'use client';
 // 문장 걸어 두기: 첫 화면(세 갈래) + 읽기 벽 · 옮겨 적기 · 빛 무늬 퍼즐.
-// 덮개 화면이 Esc·닫기를 맡으므로 여기서는 Esc를 쓰지 않는다.
+// 덮개 화면이 Esc·닫기를 맡으므로 여기서는 Esc를 쓰지 않는다. 마친 뒤로는 진행이 바뀔 때마다 덮개 화면에 결과를 알린다(ctx.report).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLang, useTr } from '@/components/i18n/useLang';
+import { GAMES } from '../registry';
 import type { GameContext, GameResult } from '../types';
 import type { HangInput, HangState, WallResult } from './actions';
-import { LightIcon, PenIcon, SoundIcon, WallIcon } from './icons';
+import { CheckIcon, DoorIcon, LightIcon, PenIcon, SoundIcon, WallIcon } from './icons';
 import { isCleared, scoreOf, type Progress, type Sentence } from './logic';
 import { SAMPLE_SENTENCES } from './samples';
 import { createSound, type Sound } from './sound';
@@ -29,6 +31,15 @@ function readMuted(): boolean {
   }
 }
 
+function resultFrom(p: Progress, start: number): GameResult {
+  return {
+    score: scoreOf(p),
+    cleared: isCleared(p),
+    ms: Math.round(performance.now() - start),
+    detail: { hung: p.hung ? 1 : 0, puzzle: p.solved, read: p.read },
+  };
+}
+
 export function SentencesGame({ ctx, api }: { ctx: GameContext; api: Api }) {
   const [view, setView] = useState<View>('home');
   const [wall, setWall] = useState<Sentence[] | null>(null);
@@ -39,6 +50,10 @@ export function SentencesGame({ ctx, api }: { ctx: GameContext; api: Api }) {
   const started = useRef(0);
   const sound = useRef<Sound | null>(null);
   const wasCleared = useRef(false);
+  const lang = useLang();
+  const tr = useTr();
+  /** 이름이 없을 때 페이지가 넘기는 말(사람 이름이 아니라 화면 말) */
+  const unnamed = !ctx.nickname || ctx.nickname === '손님';
 
   useEffect(() => {
     started.current = performance.now();
@@ -83,12 +98,12 @@ export function SentencesGame({ ctx, api }: { ctx: GameContext; api: Api }) {
     }
   };
 
-  const result = (): GameResult => ({
-    score: scoreOf(progress),
-    cleared: isCleared(progress),
-    ms: Math.round(performance.now() - started.current),
-    detail: { hung: progress.hung ? 1 : 0, puzzle: progress.solved, read: progress.read },
-  });
+  const result = (): GameResult => resultFrom(progress, started.current);
+
+  // 마친 상태(문장 하나를 걸었거나 퍼즐 세 단계)가 되면, 그 뒤로 진행이 바뀔 때마다 덮개 화면에 알린다
+  useEffect(() => {
+    if (isCleared(progress)) ctx.report?.(resultFrom(progress, started.current));
+  }, [progress, ctx]);
 
   const open = (v: View) => {
     if (v === 'read' && progress.read === 0) setProgress({ ...progress, read: 1 });
@@ -104,29 +119,53 @@ export function SentencesGame({ ctx, api }: { ctx: GameContext; api: Api }) {
       <div className={s.light} aria-hidden="true" />
       <header className={s.bar}>
         {view !== 'home' ? (
-          <button type="button" className={s.chip} onClick={() => setView('home')} aria-label="처음 화면으로">
-            처음으로
+          <button type="button" className={s.chip} onClick={() => setView('home')} aria-label={tr('처음 화면으로', 'Back to the start screen')}>
+            {tr('처음으로', 'Back')}
           </button>
+        ) : lang === 'en' ? (
+          // 부르는 이름은 사람이 정한 말이라 옮기지 않는다
+          <span className={s.hello}>
+            {unnamed ? (
+              'Welcome!'
+            ) : (
+              <>
+                Welcome, <span lang="ko">{ctx.nickname}</span>
+              </>
+            )}
+          </span>
         ) : (
           <span className={s.hello}>{ctx.nickname} 님, 어서 오세요</span>
         )}
         <span className={s.grow} />
-        <button type="button" className={s.chip} onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? '소리 켜기' : '소리 끄기'}>
+        <button
+          type="button"
+          className={s.chip}
+          onClick={toggleSound}
+          aria-pressed={!muted}
+          aria-label={muted ? tr('소리 켜기', 'Unmute') : tr('소리 끄기', 'Mute')}
+        >
           <SoundIcon on={!muted} />
         </button>
         <button type="button" className={s.chip} onClick={() => ctx.onExit(result())}>
-          그만하기
+          <DoorIcon /> {tr('그만하기', 'Quit')}
         </button>
       </header>
 
       {celebrate ? (
         <div className={s.cheer} role="status">
           <p>
-            <strong>다 했어요!</strong> {progress.hung ? '문장 한 장을 걸어 두었어요.' : '빛 무늬 세 단계를 모두 맞췄어요.'}
+            <strong>{tr('다 했어요!', 'All done!')}</strong>{' '}
+            {progress.hung
+              ? tr('문장 한 장을 걸어 두었어요.', 'You hung a sentence.')
+              : tr('빛 무늬 세 단계를 모두 맞췄어요.', 'You solved all three light puzzle stages.')}
           </p>
           <div className={s.row}>
-            <button type="button" className={s.btnMain} onClick={() => ctx.onExit(result())}>결과 보기</button>
-            <button type="button" className={s.btn} onClick={() => setCelebrate(false)}>더 놀기</button>
+            <button type="button" className={s.btnMain} onClick={() => ctx.onExit(result())}>
+              <CheckIcon /> {tr('결과 보기', 'See results')}
+            </button>
+            <button type="button" className={s.btn} onClick={() => setCelebrate(false)}>
+              {tr('더 놀기', 'Keep playing')}
+            </button>
           </div>
         </div>
       ) : null}
@@ -162,6 +201,7 @@ export function SentencesGame({ ctx, api }: { ctx: GameContext; api: Api }) {
           <LightPuzzle
             pool={puzzlePool}
             seed={ctx.seed}
+            coarse={ctx.coarse}
             play={play}
             onMiss={() => setProgress({ ...progress, misses: progress.misses + 1 })}
             onSolved={(n) => {
@@ -177,25 +217,35 @@ export function SentencesGame({ ctx, api }: { ctx: GameContext; api: Api }) {
 function Home({ onPick, progress }: { onPick: (v: View) => void; progress: Progress }) {
   const first = useRef<HTMLButtonElement>(null);
   useEffect(() => first.current?.focus(), []);
+  const lang = useLang();
+  const tr = useTr();
   return (
-    <section className={s.home} aria-label="무엇을 할까요">
-      <h2 className={s.title}>문장 걸어 두기</h2>
-      <p className={s.lead}>창살 빛이 드는 벽에 좋은 문장을 한 장씩 걸어요.</p>
+    <section className={s.home} aria-label={tr('무엇을 할까요', 'What would you like to do?')}>
+      <h2 className={s.title}>{tr('문장 걸어 두기', 'Hang a sentence')}</h2>
+      <p className={s.lead}>{tr('창살 빛이 드는 벽에 좋은 문장을 한 장씩 걸어요.', 'Hang good sentences, one at a time, on a wall lit through the window lattice.')}</p>
+      {/* 영어 화면: 벽의 문장은 한국어라는 것과 글 없이 하는 길을 알린다 */}
+      {lang === 'en' && GAMES.sentences.koreanNoteEn ? <p className={s.lead}>{GAMES.sentences.koreanNoteEn}</p> : null}
       <div className={s.picks}>
         <button ref={first} type="button" className={s.pick} onClick={() => onPick('read')}>
           <WallIcon size={56} />
-          <span className={s.pickName}>읽기 벽</span>
-          <span className={s.pickNote}>걸린 문장을 한 장씩 넘겨 봐요</span>
+          <span className={s.pickName}>{tr('읽기 벽', 'Reading wall')}</span>
+          <span className={s.pickNote}>{tr('걸린 문장을 한 장씩 넘겨 봐요', 'Flip through the hung sentences one by one')}</span>
         </button>
         <button type="button" className={s.pick} onClick={() => onPick('write')}>
           <PenIcon size={56} />
-          <span className={s.pickName}>옮겨 적기</span>
-          <span className={s.pickNote}>{progress.hung ? '한 장 걸었어요' : '문장과 출처를 적어 걸어요'}</span>
+          <span className={s.pickName}>{tr('옮겨 적기', 'Copy a sentence')}</span>
+          <span className={s.pickNote}>
+            {progress.hung ? tr('한 장 걸었어요', 'You hung one') : tr('문장과 출처를 적어 걸어요', 'Write a sentence and its source, then hang it')}
+          </span>
         </button>
         <button type="button" className={s.pick} onClick={() => onPick('puzzle')}>
           <LightIcon size={56} />
-          <span className={s.pickName}>빛 무늬 퍼즐</span>
-          <span className={s.pickNote}>{progress.solved ? `${progress.solved} / 3 단계 맞춤` : '조각을 순서대로 맞춰요 · 그림만 보고도 돼요'}</span>
+          <span className={s.pickName}>{tr('빛 무늬 퍼즐', 'Light puzzle')}</span>
+          <span className={s.pickNote}>
+            {progress.solved
+              ? tr(`${progress.solved} / 3 단계 맞춤`, `${progress.solved} / 3 stages solved`)
+              : tr('조각을 순서대로 맞춰요 · 그림만 보고도 돼요', 'Put the pieces in order · the pictures alone are enough')}
+          </span>
         </button>
       </div>
     </section>

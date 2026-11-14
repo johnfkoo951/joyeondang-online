@@ -1,11 +1,15 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import { isEditingTarget, shouldHandleShortcut } from '@/lib/keys';
+import { isEditingTarget, letterOf, shouldHandleShortcut } from '@/lib/keys';
 import { walkKeyAction } from './controls';
 import * as P from './prefs';
+import { fullscreenEsc } from './useFullscreen';
 
-/** 키를 받을 때마다 읽는 지금 상태 */
-export type KeyLive = { game: boolean; ready: boolean; panel: boolean; anyOpen: boolean; canTalk: boolean; coarse: boolean };
+/**
+ * 키를 받을 때마다 읽는 지금 상태. sheet: 걷기 위에 페이지 시트(방 쪽지, 수첩 등)가 떠 있음.
+ * 그동안의 키는 시트 몫이다(Esc로 시트를 닫는 것도 시트가 한다).
+ */
+export type KeyLive = { game: boolean; sheet: boolean; ready: boolean; panel: boolean; anyOpen: boolean; canTalk: boolean; coarse: boolean };
 export type KeyActs = {
   dismissOnboard: () => void;
   closeAll: () => void;
@@ -17,6 +21,12 @@ export type KeyActs = {
   look: () => void;
   shot: () => void;
   talk: () => void;
+  /** 대화창 열기 신호(창은 대화 묶음이 가진다) */
+  chat: () => void;
+  /** 접속자 목록 열기 신호 */
+  people: () => void;
+  /** 전체 화면 켜고 끄기(키 처리 안에서 바로 불러야 브라우저가 연다) */
+  fullscreen: () => void;
   /** Enter 말하기를 막을 가까운 곳이 있는지 */
   hasNear: () => boolean;
 };
@@ -37,15 +47,16 @@ export function useWalkKeys(live: () => KeyLive, acts: KeyActs, unlockedAt: () =
       if (e.isComposing || e.keyCode === 229) return;
       const { live: getLive, acts: A, unlockedAt: unlocked } = ref.current;
       const L = getLive();
-      if (L.game) return;
+      if (L.game || L.sheet) return;
       const mod = e.metaKey || e.ctrlKey || e.altKey;
       // 걷기 엔진이 걷기 키의 기본 동작을 먼저 막으므로(defaultPrevented) shouldHandleShortcut 대신 입력칸만 거른다
-      if (!mod && P.MOVE_KEYS.has(e.key.toLowerCase()) && !isEditingTarget(e.target)) A.dismissOnboard();
+      if (!mod && P.MOVE_KEYS.has(letterOf(e)) && !isEditingTarget(e.target)) A.dismissOnboard();
       const enter = e.key === 'Enter';
       const { act, prevent } = walkKeyAction(e, {
         ...L,
         editing: !shouldHandleShortcut(e),
-        locked: Boolean(document.pointerLockElement) || performance.now() - unlocked() < UNLOCK_GRACE_MS,
+        // 전체 화면 동안(또는 막 끝난 참)의 Esc도 브라우저 몫: 그 Esc로 패널을 닫거나 메뉴를 열지 않는다
+        locked: Boolean(document.pointerLockElement) || performance.now() - unlocked() < UNLOCK_GRACE_MS || fullscreenEsc(),
         onControl: enter && P.onControl(e),
         near: enter && A.hasNear(),
       });

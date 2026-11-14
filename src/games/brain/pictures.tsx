@@ -96,7 +96,7 @@ const PICS: Record<Picture | KidsDrawerId, ReactNode> = {
   ),
 };
 
-type IconName = 'soundOn' | 'soundOff' | 'check' | 'cross' | 'next' | 'star' | 'drawers' | 'kid' | 'again';
+type IconName = 'soundOn' | 'soundOff' | 'check' | 'cross' | 'next' | 'star' | 'drawers' | 'kid' | 'again' | 'door' | 'play';
 
 /** 단추 아이콘(24×24, 글자색을 따른다) */
 export function Icon({ name }: { name: IconName }) {
@@ -117,4 +117,6 @@ const ICONS: Record<IconName, ReactNode> = {
   drawers: <path d="M4 4 H20 V20 H4 Z M4 9.3 H20 M4 14.6 H20 M9.3 4 V20 M14.6 4 V20" />,
   kid: <path d="M12 3 A9 9 0 1 0 12.01 3 M8.5 10 V10.5 M15.5 10 V10.5 M8 14.5 Q12 18 16 14.5" />,
   again: <path d="M5 12 A7 7 0 1 0 7.5 6.6 M7.5 2.8 V6.8 H3.5" />,
+  door: <path d="M14 4 H6 V20 H14 M10 12 H20 M17 9 L20 12 L17 15" />,
+  play: <path d="M8 5.5 V18.5 L19 12 Z" />,
 };

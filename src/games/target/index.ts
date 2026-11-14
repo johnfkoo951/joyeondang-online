@@ -1,7 +1,9 @@
 // 종이공 과녁(1인칭 과녁 놀이). 데스크탑은 마우스로 겨누고 눌러 던지고, 휴대폰은 던질 곳을 톡 누른다.
 // 키보드만으로도: 화살표·WASD로 겨누고 Space·Enter로 던진다. Esc는 덮개 화면이 받는다.
 // 판 계산은 logic.ts, 그림은 view.ts, 글자·단추는 hud.ts, 소리는 audio.ts.
-import { shouldHandleShortcut } from '@/lib/keys';
+// 100점을 넘은 순간부터 덮개 화면에 결과를 미리 알린다(ctx.report, 닫기·Esc로 끝내도 도장이 남게).
+import { currentLang, onLangChange } from '@/components/i18n/useLang';
+import { heldKeys, letterOf, shouldHandleShortcut } from '@/lib/keys';
 import type { GameResult, MountGame } from '../types';
 import { createSound, type SoundName } from './audio';
 import { createHud } from './hud';
@@ -11,6 +13,7 @@ import {
 } from './logic';
 import { readPalette } from './palette';
 import { createView } from './view';
+import { endSay, levelSay, streakText, word, type TargetWord } from './words';
 
 const MUTE_KEY = 'jy.game.target.mute.v1';
 const COUNT_MS = 600;
@@ -27,12 +30,14 @@ function storage(): Storage | null {
   }
 }
 
-function hitLabel(e: Extract<GameEvent, { t: 'hit' }>): string {
-  if (e.kind === 'balloon') return e.gold ? '반짝!' : '톡!';
-  if (e.kind === 'duck') return '꽥!';
-  if (e.kind === 'can') return e.allDown ? '다 쓰러졌어요!' : e.extra > 0 ? '와르르!' : '땡!';
-  return e.ring === 0 ? '한가운데!' : e.ring === 1 ? '좋아요!' : '맞았어요';
+function hitWord(e: Extract<GameEvent, { t: 'hit' }>): TargetWord {
+  if (e.kind === 'balloon') return e.gold ? 'gold' : 'pop';
+  if (e.kind === 'duck') return 'duck';
+  if (e.kind === 'can') return e.allDown ? 'allDown' : e.extra > 0 ? 'crash' : 'clang';
+  return e.ring === 0 ? 'bull' : e.ring === 1 ? 'good' : 'hit';
 }
+/** 맞힌 자리 위에 뜨는 말(지금 화면 말로) */
+const hitLabel = (e: Extract<GameEvent, { t: 'hit' }>): string => word(hitWord(e), currentLang());
 
 const SOUND_OF: Record<string, SoundName> = { balloon: 'pop', duck: 'duck', can: 'can', board: 'board' };
 
@@ -49,6 +54,7 @@ const mount: MountGame = (container, ctx) => {
   const hud = createHud(container, {
     coarse: ctx.coarse,
     reducedMotion: ctx.reducedMotion,
+    lang: currentLang,
     onStop: () => exit(),
     onSound: () => {
       muted = !muted;
@@ -63,6 +69,8 @@ const mount: MountGame = (container, ctx) => {
     },
   });
   hud.setSound(muted);
+  // 놀이 중에 화면 말이 바뀌면 위 줄 글과 열린 판을 다시 쓴다
+  const offLang = onLangChange(() => hud.relabel());
   const view = createView(hud.stage, { palette: readPalette(container, ctx.theme), reducedMotion: ctx.reducedMotion, coarse: ctx.coarse });
 
   let seed = ctx.seed >>> 0;
@@ -81,7 +89,7 @@ const mount: MountGame = (container, ctx) => {
   let w = container.clientWidth || 1;
   let h = container.clientHeight || 1;
   const aim = { x: w / 2, y: h * 0.42, on: false };
-  const held = new Set<string>();
+  const held = heldKeys();
   let slow = false;
   const wake = () => (idleUntil = performance.now() + 1500);
 
@@ -105,6 +113,7 @@ const mount: MountGame = (container, ctx) => {
     view.reset(round);
     hud.setScore(0);
     hud.setStreak(0);
+    hud.setGoal(false);
     hud.setTime(ROUND_MS, ROUND_MS);
     countMs = 0;
     shown = 0;
@@ -113,7 +122,7 @@ const mount: MountGame = (container, ctx) => {
     hud.showCount('3');
     sound.play('count');
     hud.stage.focus({ preventScroll: true });
-    hud.say(`${lv === 'easy' ? '쉬운 판' : '보통 판'}. 셋, 둘, 하나 뒤에 시작해요.`);
+    hud.say(levelSay(lv, currentLang()));
   }
 
   function handle(ev: GameEvent[]) {
@@ -126,7 +135,7 @@ const mount: MountGame = (container, ctx) => {
         const at = view.project(e.at);
         hud.pop(at.x, at.y - 10, `+${e.points}`, {
           sub: hitLabel(e),
-          note: e.streak >= 2 ? `연속 ${e.streak}번` : undefined,
+          note: e.streak >= 2 ? streakText(e.streak, currentLang()) : undefined,
           big: e.points >= 40 || e.allDown,
           gold: e.gold,
         });
@@ -138,11 +147,17 @@ const mount: MountGame = (container, ctx) => {
       else if (e.t === 'tick') sound.play('tick');
       else if (e.t === 'clear') {
         sound.play('clear');
-        hud.pop(w / 2, h * 0.36, '100점!', { sub: '해냈어요', big: true });
-        hud.say('100점을 넘었어요. 해냈어요.');
+        hud.pop(w / 2, h * 0.36, word('clearPop', currentLang()), { sub: word('clearSub', currentLang()), big: true });
+        hud.say(word('clearSay', currentLang()));
+        hud.setGoal(true);
       } else if (e.t === 'end') finishRound();
     }
     hud.setScore(round.score);
+    // 해낸 판이 하나라도 있으면 점수가 바뀔 때마다 알린다
+    if (ev.some((e) => e.t === 'hit' || e.t === 'clear' || e.t === 'end')) {
+      const r = result();
+      if (r?.cleared) ctx.report?.(r);
+    }
   }
 
   function finishRound() {
@@ -152,7 +167,7 @@ const mount: MountGame = (container, ctx) => {
     setPhase('end');
     sound.play('end');
     hud.showEnd(sum, readBest(store, level), isNew, { again: () => begin(level), change: showStart, finish: () => exit() });
-    hud.say(`끝. ${sum.score}점, 명중률 ${sum.accuracy}퍼센트.`);
+    hud.say(endSay(sum.score, sum.accuracy, currentLang()));
   }
 
   function shoot() {
@@ -209,7 +224,8 @@ const mount: MountGame = (container, ctx) => {
   const noMenu = (e: Event) => e.preventDefault();
   const onKey = (e: KeyboardEvent) => {
     if (phase !== 'play' || e.key === 'Escape' || !shouldHandleShortcut(e)) return;
-    const k = e.key.toLowerCase();
+    // 글자 키는 자판 자리로 읽는다(한글 자판이 켜져 있어도 W A S D로 조준하게)
+    const k = letterOf(e);
     slow = e.shiftKey;
     if (k === ' ' || k === 'enter') {
       if (e.target instanceof HTMLButtonElement) return;
@@ -224,11 +240,14 @@ const mount: MountGame = (container, ctx) => {
     if (!AIM_KEYS[k] || e.ctrlKey || e.metaKey || e.altKey) return;
     e.preventDefault();
     e.stopPropagation();
-    held.add(k);
+    held.down(e, k);
     aim.on = true;
   };
   const onKeyUp = (e: KeyboardEvent) => {
-    held.delete(e.key.toLowerCase());
+    // 맥은 Command를 누르고 있는 동안 다른 키를 뗀 신호를 주지 않는다: Command를 떼면 조준 키를 모두 놓는다
+    // (아직 누르고 있던 키는 다시 눌러야 한다. 조준점이 혼자 계속 흐르는 것보다 멈추는 쪽이 낫다)
+    if (e.key === 'Meta') held.clear();
+    else held.up(e);
     slow = e.shiftKey;
   };
   const onBlur = () => held.clear();
@@ -263,7 +282,7 @@ const mount: MountGame = (container, ctx) => {
     if (held.size) {
       let dx = 0;
       let dy = 0;
-      for (const k of held) {
+      for (const k of held.values()) {
         dx += AIM_KEYS[k][0];
         dy += AIM_KEYS[k][1];
       }
@@ -280,11 +299,11 @@ const mount: MountGame = (container, ctx) => {
           hud.showCount(String(3 - n));
           sound.play('count');
         } else {
-          hud.showCount('던져요!');
+          hud.showCount(word('go', currentLang()));
           sound.play('go');
           goMs = 0;
           setPhase('play');
-          hud.say('시작!');
+          hud.say(word('start', currentLang()));
         }
       }
     } else if (phase === 'play') {
@@ -308,6 +327,7 @@ const mount: MountGame = (container, ctx) => {
     cleaned = true;
     exited = true;
     cancelAnimationFrame(raf);
+    offLang();
     ro?.disconnect();
     st.removeEventListener('pointermove', onMove);
     st.removeEventListener('pointerleave', onLeave);

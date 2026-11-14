@@ -2,9 +2,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BASS_RANGE, BLUES_FORM, CHORDS, GRID_CELLS, II_V_I, MAX_PIECES, PASS_ACC, ROUNDS, SCALE,
+  BASS_RANGE, BLUES_FORM, CHORDS, CLEAR_ROUNDS, COARSE_WIDEN, GRID_CELLS, II_V_I, MAX_PIECES, PASS_ACC, ROUNDS, SCALE,
   addPiece, barLen, buildRound, composeTimeline, decodeGrid, emptyGrid, encodeGrid, eventsBetween, exampleGrid, heardAt,
-  judgePhrase, makeRound, nearestVerdict, noteCount, parseSong, phraseIndexAt, phraseVerdict, roundTimeline, serializeSong,
+  isCleared, judgePhrase, judgeWindow, makeRound, nearestVerdict, noteCount, parseSong, phraseIndexAt, phraseVerdict, roundTimeline, serializeSong,
   slotTime, songTimeline, summarizeRound, swingRatio, toggleCell, totalScore, verdictOf, walkingBass,
   type Ev, type Piece,
 } from '../../src/games/jam/logic.ts';
@@ -55,6 +55,32 @@ test('판정 창: good 안은 좋아요, ok 안은 빠름·늦음, 그 밖은 �
     const gap = slotTime(2, r.bpm) - slotTime(1, r.bpm);
     if (r.adjacent || r.offbeats[1] > 0) assert.ok(r.win.ok < gap, `bpm ${r.bpm}`);
   }
+});
+
+test('마침(도장)은 1판만 넘으면 된다. 2·3판은 덤', () => {
+  assert.equal(CLEAR_ROUNDS, 1);
+  assert.equal(isCleared([false, false, false]), false);
+  assert.equal(isCleared([true, false, false]), true, '1판만 넘어도 마침');
+  assert.equal(isCleared([false, true, true]), false, '1판을 못 넘으면 뒤 판을 넘어도 아직');
+  assert.equal(isCleared([true, true, true]), true);
+  assert.equal(isCleared([]), false);
+});
+
+test('손가락 기기 판정 창: 조금 넓고, 엇박 판에서도 가까운 두 자리를 헷갈리지 않는다', () => {
+  for (const r of ROUNDS) {
+    assert.deepEqual(judgeWindow(r, false), r.win, '마우스·키보드는 그대로');
+    const w = judgeWindow(r, true);
+    assert.ok(w.ok > r.win.ok && w.good > r.win.good, `bpm ${r.bpm} 넓어짐`);
+    assert.ok(w.ok <= r.win.ok * COARSE_WIDEN + 1e-12 && w.good <= r.win.good * COARSE_WIDEN + 1e-12);
+    assert.ok(w.good < w.ok);
+    const gap = slotTime(2, r.bpm) - slotTime(1, r.bpm);
+    if (r.adjacent || r.offbeats[1] > 0) assert.ok(w.ok < gap, `bpm ${r.bpm} 엇박 간격 ${gap}보다 좁게`);
+  }
+  // 넓힌 창이면 조금 더 늦은 탭도 받아 준다
+  const r0 = ROUNDS[0];
+  const late = r0.win.ok + 0.02;
+  assert.equal(verdictOf(late, r0.win), null);
+  assert.equal(verdictOf(late, judgeWindow(r0, true)), 'late');
 });
 
 test('받아 친 마디 판정: 다 맞음, 빠름, 놓침, 남는 탭', () => {

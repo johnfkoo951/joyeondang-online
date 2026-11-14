@@ -1,12 +1,14 @@
 // 박공 아래 잼: 처음 → 받아 치기 세 판 → 두 마디 만들기 → 오늘의 곡.
+// 1판을 넘으면 마친 것(도장), 2·3판과 두 마디는 덤. 마친 순간부터 덮개 화면에 결과를 미리 알린다(ctx.report).
 // 소리는 첫 단추를 누른 뒤에 켠다. 정리(unmount) 때 스케줄러를 멈추고 AudioContext를 닫는다.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GameContext } from '../types';
+import { useTr } from '@/components/i18n/useLang';
+import type { GameContext, GameResult } from '../types';
 import { createEngine, createTransport } from './audio';
 import { Composer } from './Composer';
-import { DrumArt, IconDoor, IconEar, IconHand, IconNote, IconPlay, IconSound, IconStar, IconStop } from './icons';
+import { DrumArt, IconCheck, IconDoor, IconEar, IconHand, IconNote, IconPlay, IconSound, IconStar, IconStop } from './icons';
 import {
-  ROUNDS, SCALE, SONG_KEY, addPiece, decodeGrid, emptyGrid, heardAt, parseSong, serializeSong, songTimeline, summarizeRound, totalScore,
+  ROUNDS, SCALE, SONG_KEY, addPiece, decodeGrid, emptyGrid, heardAt, isCleared, parseSong, serializeSong, songTimeline, summarizeRound, totalScore,
   type Grid, type Piece, type PhraseJudge,
 } from './logic';
 import { RoundPlay, type Audio } from './RoundPlay';
@@ -45,6 +47,7 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
   const mutedRef = useRef(false);
   const prog = useRef({ best: [0, 0, 0], passed: [false, false, false], attempts: [0, 0, 0], added: 0, played: false, start: 0 });
   type RoundEnd = Extract<Phase, { k: 'roundEnd' }>;
+  const tr = useTr();
 
   useEffect(() => {
     prog.current.start = performance.now();
@@ -78,6 +81,19 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
     prog.current.played = true;
     setPhase({ k: 'round', round, attempt });
   };
+  const resultNow = (): GameResult => {
+    const p = prog.current;
+    return {
+      cleared: isCleared(p.passed),
+      score: totalScore(p.best, p.added),
+      ms: Math.round(performance.now() - p.start),
+      detail: { rounds: p.passed.filter(Boolean).length, pieces: p.added },
+    };
+  };
+  /** 마친 뒤로는 점수가 바뀔 때마다 덮개 화면에 알린다(✕로 닫아도 결과 카드와 도장이 남게) */
+  const reportIfCleared = () => {
+    if (isCleared(prog.current.passed)) ctx.report?.(resultNow());
+  };
   const roundDone = (round: number, attempt: number, judges: PhraseJudge[]) => {
     const sum = summarizeRound(judges);
     const p = prog.current;
@@ -87,6 +103,7 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
       p.passed[round] = true;
       setPassed(p.passed.slice());
     }
+    reportIfCleared();
     setPhase({ k: 'roundEnd', round, attempt, tries: p.attempts[round], ...sum } satisfies RoundEnd);
   };
   const addToSong = (g: Grid) => {
@@ -94,6 +111,7 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
     setPieces(next);
     writeSong(next);
     prog.current.added += 1;
+    reportIfCleared();
   };
   const openSong = (back: 'intro' | 'compose') => {
     if (!ensure()) return;
@@ -103,37 +121,40 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
     audioRef.current?.transport.stop();
     const p = prog.current;
     if (!p.played && p.added === 0) return ctx.onExit();
-    ctx.onExit({
-      cleared: p.passed.every(Boolean),
-      score: totalScore(p.best, p.added),
-      ms: Math.round(performance.now() - p.start),
-      detail: { rounds: p.passed.filter(Boolean).length, pieces: p.added },
-    });
+    ctx.onExit(resultNow());
   };
 
   const stepOf = phase.k === 'round' || phase.k === 'roundEnd' ? phase.round : phase.k === 'intro' ? -1 : 3;
   return (
     <div className={s.root} data-theme={ctx.theme} data-reduced={ctx.reducedMotion ? '' : undefined}>
       <div className={s.top}>
-        <ol className={s.steps} aria-label="놀이 단계">
+        <ol className={s.steps} aria-label={tr('놀이 단계', 'Game steps')}>
           {[0, 1, 2, 3].map((k) => {
             const done = k < 3 ? passed[k] : false;
             return (
               <li key={k} data-now={k === stepOf ? '' : undefined} data-done={done ? '' : undefined} aria-current={k === stepOf ? 'step' : undefined}>
                 {k < 3 ? <span aria-hidden="true">{k + 1}</span> : <IconNote />}
-                <span className={s.sr}>{k < 3 ? `${k + 1}판${done ? ', 넘음' : ''}` : '두 마디 만들기'}</span>
+                <span className={s.sr}>
+                  {k < 3 ? tr(`${k + 1}판${done ? ', 넘음' : ''}`, `Round ${k + 1}${done ? ', cleared' : ''}`) : tr('두 마디 만들기', 'Make two bars')}
+                </span>
               </li>
             );
           })}
         </ol>
         <div className={s.tools}>
-          <button type="button" className={s.tool} onClick={toggleMute} aria-label={muted ? '소리 켜기' : '소리 끄기'} aria-pressed={muted}>
+          <button
+            type="button"
+            className={s.tool}
+            onClick={toggleMute}
+            aria-label={muted ? tr('소리 켜기', 'Unmute') : tr('소리 끄기', 'Mute')}
+            aria-pressed={muted}
+          >
             <IconSound off={muted} />
-            <span className={s.toolText}>{muted ? '소리 켜기' : '소리 끄기'}</span>
+            <span className={s.toolText}>{muted ? tr('소리 켜기', 'Unmute') : tr('소리 끄기', 'Mute')}</span>
           </button>
           <button type="button" className={s.tool} onClick={finish}>
             <IconDoor />
-            <span>그만하기</span>
+            <span>{tr('그만하기', 'Quit')}</span>
           </button>
         </div>
       </div>
@@ -144,20 +165,20 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
               <DrumArt />
             </div>
             <ol className={s.howto}>
-              <li><IconEar /> 들어요</li>
-              <li><IconHand /> 따라 쳐요</li>
-              <li><IconNote /> 두 마디를 만들어요</li>
+              <li><IconEar /> {tr('들어요', 'Listen')}</li>
+              <li><IconHand /> {tr('따라 쳐요', 'Play it back')}</li>
+              <li><IconNote /> {tr('두 마디를 만들어요', 'Make two bars')}</li>
             </ol>
             <button type="button" className={`${s.primary} ${s.big}`} onClick={() => startRound(0, 0)}>
-              <IconPlay /> 시작
+              <IconPlay /> {tr('시작', 'Start')}
             </button>
             {pieces.length > 0 ? (
               <button type="button" className={s.btn} onClick={() => openSong('intro')}>
-                <IconPlay /> 오늘의 곡 듣기 ({pieces.length})
+                <IconPlay /> {tr(`오늘의 곡 듣기 (${pieces.length})`, `Hear today’s song (${pieces.length})`)}
               </button>
             ) : null}
-            {noAudio ? <p className={s.note} role="alert">이 브라우저에서는 소리를 낼 수 없어요.</p> : null}
-            <p className={s.small}>스윙 리듬은 &quot;둥-가 둥-가&quot; 하고 길고 짧게 흔들려요.</p>
+            {noAudio ? <p className={s.note} role="alert">{tr('이 브라우저에서는 소리를 낼 수 없어요.', 'This browser can’t play sound.')}</p> : null}
+            <p className={s.small}>{tr('스윙 리듬은 "둥-가 둥-가" 하고 길고 짧게 흔들려요.', 'Swing rhythm sways long and short, like "doo-ba doo-ba".')}</p>
           </section>
         ) : null}
         {phase.k === 'round' && audio ? (
@@ -167,10 +188,13 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
             attempt={phase.attempt}
             seed={ctx.seed}
             audio={audio}
+            coarse={ctx.coarse}
             onDone={(j) => roundDone(phase.round, phase.attempt, j)}
           />
         ) : null}
-        {phase.k === 'roundEnd' ? <RoundCard p={phase} onNext={startRound} onCompose={() => setPhase({ k: 'compose' })} /> : null}
+        {phase.k === 'roundEnd' ? (
+          <RoundCard p={phase} cleared={isCleared(passed)} onNext={startRound} onCompose={() => setPhase({ k: 'compose' })} onFinish={finish} />
+        ) : null}
         {phase.k === 'compose' ? (
           <Composer ensure={ensure} seed={ctx.seed} count={pieces.length} onAdd={addToSong} onSong={() => openSong('compose')} onFinish={finish} />
         ) : null}
@@ -180,40 +204,59 @@ export function JamGame({ ctx }: { ctx: GameContext }) {
   );
 }
 
-function RoundCard({ p, onNext, onCompose }: { p: Extract<Phase, { k: 'roundEnd' }>; onNext: (round: number, attempt: number) => void; onCompose: () => void }) {
+type RoundCardProps = {
+  p: Extract<Phase, { k: 'roundEnd' }>;
+  /** 1판을 넘어 이미 마친 놀이인지(그러면 언제든 「마치기」로 끝낼 수 있다) */
+  cleared: boolean;
+  onNext: (round: number, attempt: number) => void;
+  onCompose: () => void;
+  onFinish: () => void;
+};
+
+function RoundCard({ p, cleared, onNext, onCompose, onFinish }: RoundCardProps) {
+  const tr = useTr();
   const last = p.round === ROUNDS.length - 1;
-  const title = p.passed ? (last ? '세 판을 모두 넘었어요' : `${p.round + 1}판을 넘었어요`) : '한 번 더 들어 볼까요?';
+  const title = p.passed
+    ? last
+      ? tr('세 판을 모두 넘었어요', 'You cleared all three rounds')
+      : tr(`${p.round + 1}판을 넘었어요`, `You cleared round ${p.round + 1}`)
+    : tr('한 번 더 들어 볼까요?', 'Shall we listen once more?');
+  const firstClear = p.passed && p.round === 0;
   return (
     <section className={s.card} aria-label={title}>
       <div className={s.stars} aria-hidden="true">
         {[1, 2, 3].map((k) => <IconStar key={k} on={k <= p.stars} />)}
       </div>
       <h3>{title}</h3>
-      <p>
-        맞힌 정도 {Math.round(p.acc * 100)}% · 점수 {p.points}
-      </p>
+      <p>{tr(`맞힌 정도 ${Math.round(p.acc * 100)}% · 점수 ${p.points}`, `Accuracy ${Math.round(p.acc * 100)}% · Score ${p.points}`)}</p>
       <div className={s.actions}>
         {p.passed && !last ? (
           <button type="button" className={`${s.primary} ${s.big}`} onClick={() => onNext(p.round + 1, 0)} autoFocus>
-            <IconPlay /> 다음 판
+            <IconPlay /> {tr('다음 판', 'Next round')}
           </button>
         ) : null}
         {p.passed && last ? (
           <button type="button" className={`${s.primary} ${s.big}`} onClick={onCompose} autoFocus>
-            <IconNote /> 두 마디 만들기
+            <IconNote /> {tr('두 마디 만들기', 'Make two bars')}
           </button>
         ) : null}
         {!p.passed ? (
           <button type="button" className={`${s.primary} ${s.big}`} onClick={() => onNext(p.round, p.attempt + 1)} autoFocus>
-            <IconPlay /> 다시 하기
+            <IconPlay /> {tr('다시 하기', 'Try again')}
           </button>
         ) : null}
         {!p.passed && p.tries >= 2 ? (
           <button type="button" className={s.btn} onClick={onCompose}>
-            두 마디 만들기로 가기
+            {tr('두 마디 만들기로 가기', 'Go to making two bars')}
+          </button>
+        ) : null}
+        {cleared ? (
+          <button type="button" className={s.btn} onClick={onFinish}>
+            <IconCheck /> {tr('마치기', 'Finish')}
           </button>
         ) : null}
       </div>
+      {firstClear ? <p className={s.small}>{tr('여기서 마쳐도 도장을 받아요. 다음 판은 덤이에요.', 'You get the stamp even if you finish here. The next rounds are a bonus.')}</p> : null}
     </section>
   );
 }
@@ -223,6 +266,7 @@ function SongPlay({ ensure, pieces, onBack }: { ensure: () => Audio | null; piec
   const [cur, setCur] = useState(-1);
   const [playing, setPlaying] = useState(false);
   const loop = useRef({ raf: 0, audio: null as Audio | null });
+  const tr = useTr();
 
   const stop = () => {
     const l = loop.current;
@@ -262,9 +306,13 @@ function SongPlay({ ensure, pieces, onBack }: { ensure: () => Audio | null; piec
   }, []);
 
   return (
-    <section className={s.song} aria-label="오늘의 곡">
+    <section className={s.song} aria-label={tr('오늘의 곡', 'Today’s song')}>
       <p className={s.lead}>
-        <IconNote /> 지금까지 만든 두 마디 {grids.length}개를 블루스 반주 위에 이어 들어요.
+        <IconNote />{' '}
+        {tr(
+          `지금까지 만든 두 마디 ${grids.length}개를 블루스 반주 위에 이어 들어요.`,
+          `Hear the ${grids.length === 1 ? '1 two-bar piece' : `${grids.length} two-bar pieces`} made so far, strung together over a blues backing.`,
+        )}
       </p>
       <ol className={s.pieces}>
         {grids.map((g, k) => (
@@ -279,11 +327,11 @@ function SongPlay({ ensure, pieces, onBack }: { ensure: () => Audio | null; piec
       </ol>
       <div className={s.actions}>
         {playing ? (
-          <button type="button" className={s.primary} onClick={stop}><IconStop /> 멈추기</button>
+          <button type="button" className={s.primary} onClick={stop}><IconStop /> {tr('멈추기', 'Stop')}</button>
         ) : (
-          <button type="button" className={`${s.primary} ${s.big}`} onClick={play} autoFocus><IconPlay /> 곡 듣기</button>
+          <button type="button" className={`${s.primary} ${s.big}`} onClick={play} autoFocus><IconPlay /> {tr('곡 듣기', 'Play the song')}</button>
         )}
-        <button type="button" className={s.btn} onClick={() => { stop(); onBack(); }}>돌아가기</button>
+        <button type="button" className={s.btn} onClick={() => { stop(); onBack(); }}>{tr('돌아가기', 'Back')}</button>
       </div>
     </section>
   );

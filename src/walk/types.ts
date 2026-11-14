@@ -28,10 +28,36 @@ export type Hotspot = {
   title: string; line: string; slug?: string;
   /**
    * portal = 방 장면으로 들어가는 문(slug = 방), exit = 방 장면에서 집으로 나가는 문,
-   * game = 방 안의 놀이 자리(game = src/games 등록 id)
+   * game = 방 안의 놀이 자리(game = src/games 등록 id),
+   * frame = 갤러리 액자 앞(frame = 액자 id). 세계의 hotspots 목록에는 없고 엔진이 액자 앞에서만 만들어 알린다
    */
-  kind: 'room' | 'door' | 'sign' | 'lantern' | 'stage' | 'portal' | 'exit' | 'game';
+  kind: 'room' | 'door' | 'sign' | 'lantern' | 'stage' | 'portal' | 'exit' | 'game' | 'frame' | 'exhibit' | 'board';
   game?: string;
+  frame?: string;
+  /** 방 안 상호작용 전시물 id(src/content/room-exhibits.ts) */
+  exhibit?: string;
+  /** 리더보드 키오스크가 보여 줄 방 slug */
+  boardRoom?: string;
+  /** 시선(Gaze) 조준 중심 높이(m, 기본 1.15) */
+  aimY?: number;
+  /** 시선 또는 반경 안 하이라이트 대상 여부 */
+  gazed?: boolean;
+  /**
+   * 엔진이 알린 「약한」 가까움(휴대폰 3인칭 액자 또는 방 안 시선 하이라이트): 크게 보기·열기 단추와 E에는
+   * 잡히지만 Enter 말하기와 반려동물 부르기를 막지 않는다
+   */
+  weak?: boolean;
+};
+
+/**
+ * 사진 갤러리 액자 하나(걷기 손질이 부엌 벽의 빈 구간에 건다, gallery.ts). (x, y, z)는 액자 뒤판 가운데(벽 면에 붙는다),
+ * w·h는 바깥 틀 크기, yaw는 액자가 보는 쪽(+z가 0, 방 안쪽). size는 틀 모양(p 세로, m 가로, l 큰 가로).
+ * id는 「층-벽-순번」(예: 1-a-2): 같은 집 데이터면 늘 같다. room은 액자가 걸린 구역의 이름표(집 데이터 그대로)
+ */
+export type GalleryFrame = {
+  id: string; room: string; level: Level;
+  x: number; y: number; z: number; w: number; h: number; yaw: number;
+  size: 'p' | 'm' | 'l';
 };
 
 /**
@@ -45,6 +71,8 @@ export type Portal = { slug: string; level: Level; x: number; z: number; yaw: nu
 export type RemotePlayer = {
   id: string; name: string; color: string;
   x: number; z: number; y: number; level: Level; yaw: number; moving: boolean;
+  /** 그 사람이 지금까지 뛴 수(바뀌면 이 화면에서 한 번 뛰게 한다. 옛 화면·옛 서버면 없다), 앉아 있는가 */
+  jumps?: number; sitting?: boolean;
   /** 말풍선 글과 받은 때(ms, Date.now 기준). 6초 뒤 사라진다 */
   bubble?: string; bubbleAt?: number;
   /** 나중에 AI 캐릭터 그림을 붙일 자리(지금은 비움) */
@@ -57,8 +85,18 @@ export type FurnitureKind =
   | 'bench' | 'pendant' | 'stairs' | 'pine' | 'stoneLantern' | 'shrub' | 'path' | 'yardBench'
   | 'lattice' | 'lowTable' | 'cushion' | 'foldingScreen' | 'lacquerChest' | 'hanjiLantern' | 'hanjiPendant' | 'ridgeBeam'
   | 'slopedCeiling' | 'stripeWall' | 'lightPattern' | 'roundRug' | 'playMat' | 'recordShelf' | 'piano' | 'doubleBass' | 'musicStand' | 'toyShelf' | 'wallFrames' | 'targets' | 'paperBasket' | 'kidDesk' | 'bunting' | 'globeLantern' | 'bookWall' | 'corkBoard' | 'drawers9' | 'chalkboard' | 'readingDesk' | 'chair' | 'sentenceLine' | 'manuscriptDesk' | 'sheerCurtain' | 'plant' | 'windowSeat' | 'toyChest' | 'blockTower' | 'playTent'
-  | 'bed' | 'sideTable' | 'wardrobe' | 'guestDesk' | 'workbench' | 'pegboard' | 'boxShelf' | 'bicycle' | 'stool';
-export type Furniture = { kind: FurnitureKind; level: Level; x1: number; x2: number; z1: number; z2: number; face?: '+x' | '-x' | '+z' | '-z'; collide: boolean };
+  | 'bed' | 'sideTable' | 'wardrobe' | 'guestDesk' | 'workbench' | 'pegboard' | 'boxShelf' | 'bicycle' | 'stool'
+  // 걷기 놀이판 손질(staging.ts)이 놓는 행사·마당 소품
+  | 'weddingStage' | 'flowerArch' | 'aisle' | 'glassRail' | 'photoFrame' | 'flowerStand' | 'guestbook' | 'puppetStage' | 'welcomeSign' | 'planter' | 'hyeonpan' | 'pathLight' | 'sconce'
+  // 방 업그레이드 전용 가구·차량·장비·전시물
+  | 'pkmGallery' | 'jisanDesk' | 'lectureWall' | 'constellationMobile' | 'leaderboardStand'
+  | 'grenadier' | 'cla45' | 'tiguanPlanWall' | 'diecastDisplay' | 'opsCommandRig' | 'blueprintWall' | 'toolCabinet'
+  | 'grooveStation' | 'earTrainerDesk' | 'ledRibbonWall'
+  | 'celadonShelf' | 'trophyDesk' | 'treasureTable' | 'swordArcade' | 'garageTrackLight' | 'garageBayLines' | 'mccFieldCart' | 'poetryShelf' | 'inkWritingDesk' | 'watercolorEasel' | 'lightShaft';
+/**
+ * rot이 있으면 face 대신 그 각도(라디안, y축)로 돌려 놓는다. 이때 W는 x 폭, D는 z 폭으로 읽는다(대각선으로 놓는 장식용).
+ */
+export type Furniture = { kind: FurnitureKind; level: Level; x1: number; x2: number; z1: number; z2: number; face?: '+x' | '-x' | '+z' | '-z'; rot?: number; collide: boolean };
 
 /** 집 바깥을 꾸미는 단순 도형. 엔진이 종류별로 그린다. */
 export type Prop =
@@ -68,8 +106,11 @@ export type Prop =
   | { type: 'gable'; x1: number; x2: number; z1: number; z2: number; eave: number; ridge: number; ridgeAxis: 'x' | 'z' };
 
 export type HouseWorld = {
-  /** 'redrawn' = 놀기 좋게 다시 그린 집, 'real' = 실제 축척의 집(손님 전용), 'room' = 문으로 들어가는 방 장면 */
-  kind: 'redrawn' | 'real' | 'room';
+  /**
+   * 'redrawn' = 놀기 좋게 다시 그린 집, 'real' = 실제 축척의 집(손님 전용), 'room' = 문으로 들어가는 방 장면,
+   * 'shell' = 실측 껍데기만 지은 가벼운 시험 지도(관리자 전용, lib/shell-world.ts. 전망·가구·함께 걷기 없음)
+   */
+  kind: 'redrawn' | 'real' | 'room' | 'shell';
   floor2: number;
   /** 집 안 판정용 외곽(이 안에서는 지붕을 걷고, 3인칭이면 벽을 낮춘다) */
   house: { x1: number; x2: number; z1: number; z2: number };
@@ -89,4 +130,8 @@ export type HouseWorld = {
   portals?: Portal[];
   /** 방 장면에만: 어느 방인지와 그 방의 놀이 id */
   room?: { slug: string; games: string[] };
+  /** 실제 집을 걷기용으로 손질했으면 그때 고른 꾸밈(staging.ts). 한 번 손질한 세계는 다시 손질하지 않는다 */
+  theme?: string;
+  /** 실제 집에만: 부엌 사진 갤러리 액자(걷기 손질이 건다, gallery.ts). 없으면 걸지 않은 것(끈 경우 포함) */
+  gallery?: GalleryFrame[];
 };

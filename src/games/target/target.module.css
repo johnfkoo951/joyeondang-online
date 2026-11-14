@@ -25,6 +25,14 @@
 .timeBar { position: relative; width: 52px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .timeBar i { position: absolute; inset: 0 auto 0 0; width: calc(var(--left, 1) * 100%); background: var(--pine); border-radius: 4px; }
 .root[data-hurry] .timeBar i { background: var(--roof); }
+.goal { display: inline-flex; align-items: center; gap: 1px; color: var(--ink-3); }
+.goal svg { width: 22px; height: 22px; }
+.goal small { font-size: 0.72rem; font-weight: 800; }
+.goal[data-on] { color: var(--ink); }
+.goal[data-on] svg { animation: goal-on 0.5s ease-out; }
+@keyframes goal-on { 0% { transform: scale(1.8); } 100% { transform: scale(1); } }
+.root[data-reduced] .goal[data-on] svg { animation: none; }
+@media (prefers-reduced-motion: reduce) { .goal[data-on] svg { animation: none; } }
 .root[data-hurry] .time b { color: var(--roof); }
 .tools { margin-left: auto; display: flex; gap: 6px; }
 .streak {
@@ -43,6 +51,7 @@
 .btn:hover { background: var(--paper-3); }
 .btn:focus-visible, .level:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .btn svg { width: 22px; height: 22px; flex: none; }
+.btn span { white-space: nowrap; }
 .icon { padding: 0; width: 44px; }
 .primary { background: var(--roof); color: var(--roof-on); border-color: transparent; }
 .primary:hover { background: color-mix(in srgb, var(--roof) 88%, var(--ink)); }
@@ -72,7 +81,7 @@
 .big { margin: 2px 0; font-size: 3rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: var(--roof); }
 .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 0; }
 .nums div { display: grid; gap: 2px; padding: 8px 4px; border-radius: 10px; background: var(--paper-2); }
-.nums dt { font-size: 0.78rem; color: var(--ink-2); }
+.nums dt { font-size: 0.82rem; color: var(--ink-2); }
 .nums dd { margin: 0; font-size: 1.2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .badge {
   display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 999px; background: var(--season-soft);
@@ -146,7 +155,11 @@
   .chip { padding: 4px 9px; gap: 5px; }
   .chip b { font-size: 1.1rem; }
   .timeBar { width: 28px; }
-  .label { font-size: 0.72rem; }
-  .tools .btn:not(.icon) { padding: 0 10px; }
+  .goal small { display: none; }
+  /* 「점수」 이름표는 줄이지 않는다(12.8px). 자리가 모자라면 꾸밈인 시간 막대부터 줄어든다 */
+  .time { min-width: 0; }
+  .tools .btn:not(.icon) { padding: 0; width: 44px; }
+  /* 좁은 화면: 그만하기는 문 그림만(이름은 aria-label에 남는다) */
+  .stopText { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .level { min-height: 96px; }
 }

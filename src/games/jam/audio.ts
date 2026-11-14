@@ -1,6 +1,7 @@
 // 박공 아래 잼의 소리. Web Audio로 그 자리에서 합성한다(음원 파일 없음).
 // 스케줄러는 앞질러 보기(lookahead) 방식: 25ms마다 깨어나 0.15초 앞까지의 사건을 오디오 시계 시각에 예약한다.
 // setInterval이 늦게 깨어나도 소리는 예약한 오디오 시각에 정확히 나고, 판정도 같은 오디오 시계로 한다.
+import { openAudioContext } from '../audio-session';
 import { eventsBetween, type ClockStamp, type Ev, type Inst } from './logic';
 
 const LOOKAHEAD = 0.15;
@@ -23,14 +24,8 @@ export type Engine = {
 };
 
 export function createEngine(muted: boolean): Engine | null {
-  const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AC) return null;
-  let ctx: AudioContext;
-  try {
-    ctx = new AC({ latencyHint: 'interactive' });
-  } catch {
-    return null;
-  }
+  const ctx = openAudioContext({ latencyHint: 'interactive' });
+  if (!ctx) return null;
   if (ctx.state === 'suspended') void ctx.resume();
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -16;

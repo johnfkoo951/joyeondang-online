@@ -49,5 +49,14 @@ game-server/.dev.vars
 game-server/.wrangler
 game-server/node_modules
 
+# Local lettering source exports and browser evidence.
+/private/lettering-assets/eagle/
+/private/lettering-assets/checks/
+
+/private/lettering-assets/*.log
+
+# walk-probe 확인 화면(check-input.mjs의 기본 출력 폴더)
+/r3/
+
 # 집마다 다른 금지어와 시험 환경(공개하지 않음, private.example/ 참고)
 /private/

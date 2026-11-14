@@ -34,6 +34,16 @@ const SNAP_GOAL = 1.5;
 const FLOOR1 = -1;
 const FLOOR2 = -2;
 const SQRT2 = Math.SQRT2;
+/** 격자를 조각내어 만들 때 잇기 단계에서 쉬어 가는 마디 수(마디 하나에 step() 여덟 번) */
+const STEP_NODES = 128;
+/** 틈틈이 만들 때 한 번에 쓰는 시간(ms): 걷는 프레임 사이에 끼어도 끊기지 않을 만큼 */
+const PREP_MS = 6;
+/** 길 찾기 패널이 기다리는 중이면 더 길게(걷기는 멈춰 있다) */
+const PREP_URGENT_MS = 12;
+/** 쉬는 틈을 알려 주지 않는 브라우저에서 조각 사이에 두는 틈(ms) */
+const PREP_GAP_MS = 16;
+/** 화면이 바빠 쉬는 틈이 안 나도 이만큼 지나면 한 조각은 돈다(ms) */
+const PREP_IDLE_TIMEOUT_MS = 300;
 const DIRS: ReadonlyArray<readonly [number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
 type Rect = { x1: number; x2: number; z1: number; z2: number };
@@ -89,6 +99,9 @@ const grids = new WeakMap<HouseWorld, Grid>();
 function gridFor(world: HouseWorld): Grid {
   const hit = grids.get(world);
   if (hit) return hit;
+  // 틈틈이 만들던 격자가 있으면 남은 몫을 지금 마저 만든다(처음부터 다시 만들지 않는다)
+  const job = jobs.get(world);
+  if (job) return finishJob(job);
   const tuned = tuneWorld(world);
   const g = grids.get(tuned) ?? buildGrid(tuned);
   grids.set(world, g);
@@ -97,6 +110,18 @@ function gridFor(world: HouseWorld): Grid {
 }
 
 function buildGrid(w: HouseWorld): Grid {
+  const it = buildGridSteps(w);
+  for (;;) {
+    const r = it.next();
+    if (r.done) return r.value;
+  }
+}
+
+/**
+ * 격자를 조각내어 만든다: 줄(또는 마디 묶음)마다 한 번씩 쉬어 갈 수 있고, 끝까지 돌리면 한 번에 만든 것과 같은 격자가 나온다.
+ * 실제 크기의 집은 한 번에 만들면 휴대폰에서 화면이 0.5초쯤 멈춘다.
+ */
+function* buildGridSteps(w: HouseWorld): Generator<undefined, Grid, void> {
   const p = w.physics;
   const b1 = levelBounds(w, 1), b2 = levelBounds(w, 2);
   const all = b1 && b2 ? grow(b1, b2) : b1 ?? b2 ?? pad(dot(w.spawn.x, w.spawn.z), CELL);
@@ -111,6 +136,7 @@ function buildGrid(w: HouseWorld): Grid {
     }
   }
   const tileOf = (cx: number, cz: number) => Math.floor(cx / TILE) + Math.floor(cz / TILE) * tnx;
+  yield;
 
   // 마디: 열마다 설 수 있는 높이(경사면 먼저, 그다음 1층·2층 바닥). heightAt이 그 높이를 그대로 돌려주고 막히지 않은 것만.
   const X: number[] = [], Z: number[] = [], Y: number[] = [], L: number[] = [], S: number[] = [], C: number[] = [], NW: number[] = [];
@@ -138,6 +164,7 @@ function buildGrid(w: HouseWorld): Grid {
         NW.push(blocked(tp, lv, x, z, NEAR_WALL) ? 1 : 0);
       }
     }
+    yield;
   }
   const n = X.length;
   colStart[nx * nz] = n;
@@ -147,6 +174,7 @@ function buildGrid(w: HouseWorld): Grid {
   const eTo: number[] = [], eCost: number[] = [];
   const ok = [false, false, false, false];
   for (let a = 0; a < n; a++) {
+    if (a % STEP_NODES === 0 && a > 0) yield;
     eStart[a] = eTo.length;
     const cx = C[a] % nx, cz = (C[a] - cx) / nx;
     const tp = tiles[tileOf(cx, cz)];
@@ -179,6 +207,7 @@ function buildGrid(w: HouseWorld): Grid {
     return i;
   };
   for (let a = 0; a < n; a++) {
+    if (a % (STEP_NODES * 16) === 0 && a > 0) yield;
     for (let e = eStart[a]; e < eStart[a + 1]; e++) {
       const ra = find(a), rb = find(eTo[e]);
       if (ra !== rb) parent[rb] = ra;
@@ -194,6 +223,118 @@ function buildGrid(w: HouseWorld): Grid {
     eStart, eTo: Int32Array.from(eTo), eCost: Float32Array.from(eCost), comp, tiles, tnx,
     g: new Float64Array(n), from: new Int32Array(n), seen: new Uint32Array(n), done: new Uint32Array(n), run: 0,
   };
+}
+
+// ───────── 격자 미리 만들기(걷는 사이 틈틈이). 길 찾기 패널을 처음 열 때 화면이 멈추지 않게 한다
+
+type Job = {
+  world: HouseWorld; tuned: HouseWorld; it: Generator<undefined, Grid, void>;
+  done: Promise<void>; resolve: () => void;
+  /** 다음 조각을 취소하는 함수(쉬는 중이면 null) */
+  stop: (() => void) | null;
+  urgent: boolean;
+};
+const jobs = new WeakMap<HouseWorld, Job>();
+
+function settle(job: Job, g: Grid | null) {
+  job.stop?.();
+  job.stop = null;
+  jobs.delete(job.world);
+  jobs.delete(job.tuned);
+  if (g) {
+    grids.set(job.world, g);
+    grids.set(job.tuned, g);
+  }
+  job.resolve();
+}
+
+function finishJob(job: Job): Grid {
+  try {
+    for (;;) {
+      const r = job.it.next();
+      if (r.done) { settle(job, r.value); return r.value; }
+    }
+  } catch (e) {
+    settle(job, null);
+    throw e;
+  }
+}
+
+function schedule(job: Job, delay = 0) {
+  job.stop?.();
+  const run = () => {
+    job.stop = null;
+    const end = performance.now() + (job.urgent ? PREP_URGENT_MS : PREP_MS);
+    try {
+      do {
+        const r = job.it.next();
+        if (r.done) return settle(job, r.value);
+      } while (performance.now() < end);
+    } catch {
+      // 못 만들면 기다리는 쪽을 풀어 준다(그쪽이 한 번에 만들다 같은 오류를 받아 「갈 곳 없음」으로 처리한다)
+      return settle(job, null);
+    }
+    schedule(job);
+  };
+  if (!job.urgent && delay === 0 && typeof requestIdleCallback === 'function') {
+    const id = requestIdleCallback(run, { timeout: PREP_IDLE_TIMEOUT_MS });
+    job.stop = () => cancelIdleCallback(id);
+  } else {
+    const id = setTimeout(run, job.urgent ? 0 : delay || PREP_GAP_MS);
+    job.stop = () => clearTimeout(id);
+  }
+}
+
+/** 격자 크기(시험용: 조각내어 만든 것과 한 번에 만든 것이 같은지 견준다) */
+export function navStats(world: HouseWorld): { nodes: number; edges: number; parts: number } {
+  const g = gridFor(world);
+  return { nodes: g.x.length, edges: g.eTo.length, parts: new Set(g.comp).size };
+}
+
+/** 이 세계의 격자가 이미 있는지(있으면 destinations·findPath가 바로 답한다) */
+export function navReady(world: HouseWorld): boolean {
+  return grids.has(world);
+}
+
+/**
+ * 격자를 조각내어 미리 만든다. 다 되면 풀린다(이미 있으면 바로). 같은 세계로 여러 번 불러도 한 번만 만든다.
+ * urgent면 기다리는 사람이 있다는 뜻이라 쉬지 않고 이어서 돌린다. delayMs는 첫 조각을 미루는 시간(첫 화면을 그리는 동안 비켜 있게).
+ */
+export function prepareNav(world: HouseWorld, o: { urgent?: boolean; delayMs?: number } = {}): Promise<void> {
+  if (grids.has(world)) return Promise.resolve();
+  let job = jobs.get(world);
+  if (!job) {
+    let tuned: HouseWorld;
+    // 손질부터 안 되는 세계면 미리 만들 것이 없다(한 번에 만드는 쪽이 같은 오류를 받아 처리한다)
+    try { tuned = tuneWorld(world); } catch { return Promise.resolve(); }
+    let resolve = () => {};
+    const done = new Promise<void>((r) => { resolve = r; });
+    job = { world, tuned, it: buildGridSteps(tuned), done, resolve, stop: null, urgent: false };
+    jobs.set(world, job);
+    jobs.set(tuned, job);
+  }
+  if (o.urgent && !job.urgent) {
+    job.urgent = true;
+    schedule(job);
+  } else if (!job.stop) schedule(job, o.urgent ? 0 : Math.max(0, o.delayMs ?? 0));
+  return job.done;
+}
+
+/** 미리 만들기를 멈춘다(장면이 바뀔 때). 만든 데까지는 남아서 다시 prepareNav를 부르면 이어서 만든다 */
+export function pauseNav(world: HouseWorld): void {
+  const job = jobs.get(world);
+  if (!job) return;
+  job.stop?.();
+  job.stop = null;
+  job.urgent = false;
+}
+
+/** 기다리던 쪽이 떠났다(패널을 닫음): 돌고 있던 미리 만들기를 걷는 사이 틈틈이 도는 빠르기로 되돌린다. 멈춘 것은 그대로 둔다 */
+export function relaxNav(world: HouseWorld): void {
+  const job = jobs.get(world);
+  if (!job || !job.urgent) return;
+  job.urgent = false;
+  if (job.stop) schedule(job);
 }
 
 // ───────── 출발·도착 맞추기
@@ -382,6 +523,35 @@ export function findPath(world: HouseWorld, from: NavPoint, to: { x: number; z: 
     else if (straightFrom(g, last, g.surf[t], end)) path.push(end);
   }
   return path;
+}
+
+// ───────── 들어오는 자리와 이어진 열린 칸
+
+/** 격자마다 들어오는 자리(spawn)가 속한 덩어리. 그 자리에 설 칸이 없으면 -1 */
+const homes = new WeakMap<Grid, number>();
+function homeOf(g: Grid, world: HouseWorld): number {
+  let home = homes.get(g);
+  if (home === undefined) {
+    const s = snapStart(g, { x: world.spawn.x, z: world.spawn.z, y: 0, level: 1 });
+    home = s >= 0 ? g.comp[s] : -1;
+    homes.set(g, home);
+  }
+  return home;
+}
+
+/**
+ * (x, z) 둘레 radius 안에서 몸이 설 수 있는 칸 가운데 가장 가까운 것. 그 층이고, 들어오는 자리(spawn)와 이어진 덩어리여야 한다
+ * (그래서 돌려준 칸끼리는 늘 길이 있다). flat이면 평평한 바닥 칸만: 계단·경사면 위도, 높은 계단 밑의 바닥도 뺀다. 없으면 null.
+ * 격자가 아직 없으면 한 번에 만든다: 화면에서는 navReady로 먼저 확인하고 부른다.
+ */
+export function openSpot(world: HouseWorld, x: number, z: number, level: Level, radius = 1, flat = false): NavPoint | null {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
+  const g = gridFor(world);
+  const home = homeOf(g, world);
+  if (home < 0) return null;
+  const flatFloor = (k: number) => (g.surf[k] === FLOOR1 || g.surf[k] === FLOOR2) && !g.p.ramps.some((r) => inRamp(r, g.x[k], g.z[k]));
+  const i = nearest(g, x, z, Math.max(0, radius), (k, d) => (g.level[k] === level && g.comp[k] === home && (!flat || flatFloor(k)) ? d : null));
+  return i < 0 ? null : toPoint(g, i);
 }
 
 // ───────── 갈 곳 목록

@@ -1,0 +1,40 @@
+.page { max-width: 1180px; padding-block: 32px 80px; }
+.intro { display: grid; gap: 18px; padding-block: 12px 40px; max-width: 760px; }
+.intro h1 { font-family: var(--font-serif); font-size: clamp(2.4rem, 6vw, 4.6rem); font-weight: 400; line-height: 1.15; margin: 0; text-wrap: balance; }
+.intro p { margin: 0; color: var(--ink-2); line-height: 1.85; }
+.intro .lead { color: var(--ink); font-size: clamp(1.2rem, 3vw, 1.65rem); }
+.back { font-size: .86rem; color: var(--ink-2); width: fit-content; }
+.contents { display: flex; flex-wrap: wrap; gap: 12px 24px; padding-top: 12px; }
+.contents a { text-underline-offset: 6px; padding-block: 8px; }
+.section { padding-block: 32px; scroll-margin-top: 130px; }
+.sectionHead { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px 24px; margin-bottom: 24px; }
+.sectionHead h2, .reading h2, .sealSection h2 { margin: 0; font: 400 clamp(1.45rem, 3vw, 2rem)/1.45 var(--font-serif); }
+.sectionHead p { margin: 0; color: var(--ink-2); }
+.featured, .work { margin: 0; min-width: 0; }
+.featured { margin-bottom: 40px; }
+.imageLink { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.imageLink img { display: block; width: 100%; height: auto; object-fit: contain; }
+.work .imageLink { aspect-ratio: 4/3; }
+.work .imageLink img { max-height: 100%; width: auto; max-width: 100%; }
+.caption { padding-top: 16px; }
+.captionTitle { display: flex; align-items: baseline; gap: 12px; }
+.captionTitle h3 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+.number { color: var(--ink-3); font-size: .82rem; font-variant-numeric: tabular-nums; }
+.caption p { margin: 8px 0 0; color: var(--ink-2); font-size: .88rem; line-height: 1.65; }
+.caption .direction { color: var(--ink-3); font-size: .76rem; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px 28px; }
+.note { color: var(--ink-2); font-size: .86rem; line-height: 1.8; max-width: 76ch; margin: 28px 0 0; }
+.reading { display: grid; grid-template-columns: 1fr 2fr; gap: 28px; padding-block: 40px; border-block: 1px solid var(--line); margin-block: 24px; }
+.reading p, .sealSection p { line-height: 1.85; margin: 0 0 16px; }
+.collection { margin-block: 32px 48px; }
+.groupTitle { color: var(--ink-2); font-size: 1rem; font-weight: 500; margin: 0 0 24px; }
+.sealSection { scroll-margin-top: 130px; display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; padding-block: 48px; border-top: 1px solid var(--line); }
+.sealSection h2 { margin-bottom: 22px; }
+.seals { display: flex; gap: 32px; justify-content: center; align-items: center; background: var(--art-hanji-paper); color: var(--art-hanji-ink); padding: 28px; }
+.seals figure { display: grid; justify-items: center; gap: 20px; margin: 0; min-width: 0; }
+.seals img { width: 90px; height: auto; max-width: 100%; }
+.seals figcaption { font-size: .85rem; }
+.footer { border-top: 1px solid var(--line); padding-top: 24px; font-size: .85rem; color: var(--ink-2); line-height: 1.8; }
+.page a:focus-visible { outline: 3px solid var(--focus); outline-offset: 6px; }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .reading { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .grid, .sealSection { grid-template-columns: 1fr; } .intro { padding-bottom: 12px; } .section { padding-block: 24px; } .sealSection { gap: 24px; } .work .imageLink { aspect-ratio: auto; } .work .imageLink img { width: 100%; max-height: 75vh; } .grid { gap: 36px; } }

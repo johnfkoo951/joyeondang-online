@@ -29,6 +29,29 @@
 		<string>OPENAI_API_KEY</string>
 		<key>AVATAR_WORKER_ID</key>
 		<string>studio-1</string>
+		<!-- 3D 모형을 바깥 3D 서비스(Meshy)로 만들 때만 아래 세 쌍을 더한다(README의 「Meshy」. 빼면 그래픽 카드 PC의 trellis).
+		     이 판(시작 줄 version avatar-worker-6)에서만. 옛 판에서 AVATAR_MODEL_PROVIDER만 바꾸지 않는다. 사이트의 AVATAR_MODEL_PROVIDER도 같게.
+		     같은 Meshy 키로는 meshy 일꾼 하나만: 일꾼을 여럿 띄우면 하나만 이 세 쌍을 두고 나머지는 AVATAR_MODELS=0(아래 주석)으로 둔다
+		     (키마다 잠금이 하나라 둘째부터는 3D가 꺼진다. MESHY_STATE_FILE을 일꾼마다 따로 두어도 같다).
+		     켜기 전에 Meshy 대시보드에서 키에 월 크레딧 한도를 둔다. 하루 만들기 상한(MESHY_DAILY_MAX, 기본 120)은 이 프로세스의 셈이다
+		     (키 잠금으로 곧 이 키의 셈). 0021의 하루 3D 요청 상한(model_day_max 100)보다 작게 두지 않는다(작으면 받은 요청이 다음 날까지 기다린다).
+		     키 값은 넣지 않는다. 키 파일은 MESHY_API_KEY=… 한 줄, 권한 600.
+		<key>AVATAR_MODEL_PROVIDER</key>
+		<string>meshy</string>
+		<key>MESHY_API_KEY_FILE</key>
+		<string>__REPO_DIR__/worker/avatar/secrets/meshy.env</string>
+		<key>MESHY_DAILY_MAX</key>
+		<string>120</string>
+		-->
+		<!-- 3D 모형을 만들지 않는 일꾼(meshy 일꾼이 따로 있을 때 나머지 일꾼): 한 장 그리기와 방향 그림만 한다.
+		<key>AVATAR_MODELS</key>
+		<string>0</string>
+		-->
+		<!-- 원본 에셋 남기기(README의 「원본 에셋 남기기」): 그림·3D의 중간 산출물을 캐릭터 id마다 모을 보관 폴더.
+		     이 저장소(__REPO_DIR__) 밖의 절대 경로만 받는다. 빼면 남기지 않는다. 원본 사진은 어느 쪽이든 남기지 않는다.
+		<key>AVATAR_ASSET_ARCHIVE_DIR</key>
+		<string>__ASSET_ARCHIVE_DIR__</string>
+		-->
 	</dict>
 	<key>RunAtLoad</key>
 	<true/>

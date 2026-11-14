@@ -54,6 +54,15 @@ test('문제은행: id·이름·예시·그림 카드에 중복이 없다', () =
   for (const d of DRAWERS) assert.ok(CARDS.filter((c) => c.drawer === d.no).length >= 4, `서랍 ${d.no}`);
 });
 
+test('문제은행: 서랍 앞 한 줄은 좁은 서랍에서 낱말 가운데가 끊기지 않는다', () => {
+  // 휴대폰 3열 서랍 한 줄은 한글 일곱 자쯤이다. 띄어 쓴 한 덩어리가 그보다 길면 글자 단위로 끊긴다(로마자·기호는 반 자로 센다)
+  const width = (w: string) => [...w].reduce((n, ch) => n + (ch.charCodeAt(0) < 0x2000 ? 0.55 : 1), 0);
+  for (const d of DRAWERS) {
+    assert.ok(!d.hint.includes('·'), `${d.code}: 가운뎃점으로 이으면 줄바꿈 자리가 없어요`);
+    for (const w of d.hint.split(/\s+/)) assert.ok(width(w) <= 7, `${d.code}: 「${w}」가 서랍 한 줄보다 길어요`);
+  }
+});
+
 test('문제은행: 검사 함수가 나쁜 은행을 잡아낸다', () => {
   const bad: Bank = {
     ...BANK,

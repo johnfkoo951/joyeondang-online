@@ -32,6 +32,12 @@ export type GameContext = {
    * 놀이는 Esc 처리를 직접 하지 않는다: 덮개 화면이 Esc·닫기 단추를 받아 onExit()을 부른다.
    */
   onExit: (result?: GameResult) => void;
+  /**
+   * 지금까지의 결과를 덮개 화면에 미리 알린다(선택). 놀이는 마친 상태(cleared)에 닿는 순간과 그 뒤 점수가 바뀔 때 부른다.
+   * 아이가 다 하고 나서 결과 단추 대신 닫기(✕)·Esc를 눌러도, 덮개 화면이 마지막으로 받은 결과로 결과 카드와 도장을 처리한다.
+   * 한 번 cleared를 알린 놀이는 그 뒤 결과가 cleared가 아니어도 도장을 잃지 않는다.
+   */
+  report?: (result: GameResult) => void;
 };
 
 /**

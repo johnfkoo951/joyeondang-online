@@ -1,6 +1,7 @@
 'use client';
 // 1판 서랍 넣기: 낱말 카드 한 장을 아홉 지식 서랍 중 맞는 곳에. 끌어다 놓기, 서랍 누르기(탭·Enter), 숫자 1~9 모두 된다.
 import { useEffect, useRef, useState } from 'react';
+import { useLang, useTr } from '@/components/i18n/useLang';
 import { shouldHandleShortcut } from '@/lib/keys';
 import type { RoundProps } from './BrainGame';
 import { DRAWERS, type Card, type Drawer } from './bank';
@@ -9,12 +10,21 @@ import { isRightDrawer } from './logic';
 import { Icon } from './pictures';
 import s from './brain.module.css';
 
+/** 영어 화면의 서랍 이름: 화면 어디서나 같은 말(좁은 서랍 앞면에 맞는 짧은 이름이 있으면 그것, 없으면 공개 문서의 영어 이름) */
+export const drawerEn = (d: Drawer) => d.enShort ?? d.en;
+
+/** 영어 화면의 서랍 이름은 drawerEn. 서랍 앞 한 줄(hint)은 문제은행 글이라 한국어 그대로 */
 export function DrawerFace({ d, compact }: { d: Drawer; compact?: boolean }) {
+  const en = useLang() === 'en';
   return (
     <>
       <span className={s.dCode}>{d.code}</span>
-      <span className={s.dName}>{d.name}</span>
-      {!compact && <span className={s.dHint}>{d.hint}</span>}
+      <span className={s.dName}>{en ? drawerEn(d) : d.name}</span>
+      {!compact && (
+        <span className={s.dHint} lang={en ? 'ko' : undefined}>
+          {d.hint}
+        </span>
+      )}
       <span className={s.dHandle} aria-hidden="true" />
     </>
   );
@@ -23,6 +33,7 @@ export function DrawerFace({ d, compact }: { d: Drawer; compact?: boolean }) {
 export const drawerOf = (no: number) => DRAWERS[no - 1];
 
 export function RoundDrawers({ cards, play, onProgress, onDone }: RoundProps & { cards: Card[] }) {
+  const tr = useTr();
   const [i, setI] = useState(0);
   const [chosen, setChosen] = useState<number | null>(null);
   const [correct, setCorrect] = useState(0);
@@ -83,50 +94,59 @@ export function RoundDrawers({ cards, play, onProgress, onDone }: RoundProps & {
           data-state={answered ? (right ? 'right' : 'wrong') : undefined}
           onPointerDown={(e) => !answered && beginDrag(e, (drop) => choose(Number(drop.dataset.drop)))}
         >
-          <span className={s.cardKicker}>낱말 카드</span>
-          <h3 id="brain-r1-q" ref={heading} tabIndex={-1} className={s.cardLabel}>
+          <span className={s.cardKicker}>{tr('낱말 카드', 'Word card')}</span>
+          <h3 id="brain-r1-q" ref={heading} tabIndex={-1} className={s.cardLabel} lang="ko">
             {card.label}
           </h3>
         </div>
       </div>
-      <div className={s.feedback} aria-live="polite">
-        {!answered ? (
-          <p className={s.prompt}>어느 서랍에 들어갈까요? 서랍으로 끌어다 놓거나 서랍을 눌러요. 숫자 1~9도 돼요.</p>
-        ) : (
-          <div className={s.answer} data-state={right ? 'right' : 'wrong'}>
-            <p className={s.answerHead}>
-              <Icon name={right ? 'check' : 'cross'} />
-              {right ? '맞았어요!' : `아쉬워요. 정답은 ${answer.code} ${answer.name} 서랍이에요.`}
-            </p>
-            <p className={s.why}>
-              {card.why} <span className={s.code}>({card.code})</span>
-            </p>
-            <button ref={nextBtn} type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={next}>
-              {i + 1 >= cards.length ? '2판으로' : '다음'} <Icon name="next" />
-            </button>
-          </div>
+      {/* 답한 뒤에도 자리는 남긴다(글만 숨김). 풀이는 서랍 아래에 두어 답할 때 서랍이 손가락 밑에서 움직이지 않는다 */}
+      <p className={s.prompt} data-off={answered ? '' : undefined}>
+        {tr(
+          '어느 서랍에 들어갈까요? 서랍으로 끌어다 놓거나 서랍을 눌러요. 숫자 1~9도 돼요.',
+          'Which drawer does it go in? Drag it to a drawer or tap one. Keys 1 to 9 work too.',
         )}
-      </div>
-      <div className={s.drawerGrid}>
-        {DRAWERS.map((d) => {
-          const state = !answered ? undefined : d.no === card.drawer ? 'right' : d.no === chosen ? 'wrong' : 'rest';
-          return (
-            <button
-              key={d.no}
-              type="button"
-              className={s.drawer}
-              data-tone={d.no}
-              data-drop={d.no}
-              data-state={state}
-              disabled={answered}
-              onClick={() => choose(d.no)}
-              aria-keyshortcuts={String(d.no)}
-              aria-label={`${d.code} ${d.name} 서랍, ${d.hint}`}
-            >
-              <DrawerFace d={d} />
-            </button>
-          );
-        })}
+      </p>
+      <div className={s.board}>
+        <div className={s.drawerGrid}>
+          {DRAWERS.map((d) => {
+            const state = !answered ? undefined : d.no === card.drawer ? 'right' : d.no === chosen ? 'wrong' : 'rest';
+            return (
+              <button
+                key={d.no}
+                type="button"
+                className={s.drawer}
+                data-tone={d.no}
+                data-drop={d.no}
+                data-state={state}
+                disabled={answered}
+                onClick={() => choose(d.no)}
+                aria-keyshortcuts={String(d.no)}
+                aria-label={tr(`${d.code} ${d.name} 서랍, ${d.hint}`, `Drawer ${d.code} ${drawerEn(d)}`)}
+              >
+                <DrawerFace d={d} />
+              </button>
+            );
+          })}
+        </div>
+        <div className={s.feedback} aria-live="polite">
+          {answered && (
+            <div className={s.answer} data-state={right ? 'right' : 'wrong'}>
+              <p className={s.answerHead}>
+                <Icon name={right ? 'check' : 'cross'} />
+                {right
+                  ? tr('맞았어요!', 'Correct!')
+                  : tr(`아쉬워요. 정답은 ${answer.code} ${answer.name} 서랍이에요.`, `Not quite. The answer is drawer ${answer.code} ${drawerEn(answer)}.`)}
+              </p>
+              <p className={s.why} lang="ko">
+                {card.why} <span className={s.code}>({card.code})</span>
+              </p>
+              <button ref={nextBtn} type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={next}>
+                {i + 1 >= cards.length ? tr('2판으로', 'To round 2') : tr('다음', 'Next')} <Icon name="next" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

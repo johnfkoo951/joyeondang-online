@@ -1,25 +1,39 @@
 'use client';
+import { T } from '@/components/i18n/T';
+import { useLang, useTr } from '@/components/i18n/useLang';
+import { SHOT_MISS, SHOT_TEXT, pick } from './hud-text';
 import type { ShotNote } from './useShot';
 
-const TEXT: Record<ShotNote['kind'], string> = {
-  saving: '내 갤러리에 담는 중이에요',
-  saved: '내 갤러리에 담았어요',
-  downloaded: '사진을 이 기기에 내려받았어요',
-  full: '갤러리가 가득 찼어요(60장). 오래된 사진부터 지우고 다시 찍어 주세요',
-  failed: '지금은 사진을 찍지 못했어요. 잠시 뒤에 다시 해 주세요',
-  error: '갤러리에 올리지 못해 이 기기에 내려받았어요',
-};
+type Props = { note: ShotNote; onGallery: () => void; onSave: () => void; onClose: () => void };
 
-// 사진을 찍은 뒤 잠깐 뜨는 알림. 갤러리에 담았거나 가득 찼으면 갤러리로 가는 단추를 붙인다.
-export function ShotToast({ note, onGallery }: { note: ShotNote; onGallery: () => void }) {
+// 사진을 찍은 뒤 뜨는 알림. 갤러리에 담았거나 가득 찼으면 갤러리로 가는 단추를 붙인다.
+// 앱 안 브라우저처럼 내려받기가 안 되는 곳에서는 찍은 사진을 띄워 길게 눌러 저장하게 한다(hold).
+// 알림 글은 hud-text.ts의 한국어·영어(내려받기와 길게 누르기는 저장됐는지 화면이 알 수 없어 한 일만 말한다).
+export function ShotToast({ note, onGallery, onSave, onClose }: Props) {
+  const lang = useLang();
+  const tr = useTr();
   const link = note.kind === 'saved' || note.kind === 'full';
+  const stay = note.kind === 'tap' || note.kind === 'hold';
+  const text = pick(SHOT_TEXT[note.kind], lang);
   return (
     <div className="walk-shot-toast" role="status" data-kind={note.kind}>
-      <span>{TEXT[note.kind]}</span>
+      <span>{note.miss && note.kind !== 'error' ? `${pick(SHOT_MISS, lang)}. ${text}` : text}</span>
+      {note.kind === 'hold' && note.url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- 방금 찍은 사진(data: 주소)을 그대로 띄운다
+        <img className="walk-shot-img" src={note.url} alt={tr('방금 찍은 사진', 'The photo you just took')} />
+      ) : null}
       {link ? (
         <button type="button" className="btn btn-small" onClick={onGallery}>
-          내 갤러리
+          <T ko="내 갤러리" en="My gallery" />
         </button>
+      ) : null}
+      {stay ? (
+        <span className="walk-shot-row">
+          {note.kind === 'tap' ? (
+            <button type="button" className="btn btn-small btn-roof" onClick={onSave}><T ko="사진 저장" en="Save photo" /></button>
+          ) : null}
+          <button type="button" className="btn btn-small" onClick={onClose}><T ko="닫기" en="Close" /></button>
+        </span>
       ) : null}
     </div>
   );

@@ -1,5 +1,7 @@
 import 'server-only';
 import { createClient as createPlainClient, type SupabaseClient } from '@supabase/supabase-js';
+import { assetOff } from '@/lib/avatar/assets';
+import { readModelProvider, readTrainingOptOut, type ModelProvider } from '@/lib/avatar/consent';
 import { isUuid, readTotalCap } from '@/lib/avatar/rules';
 import { SUPABASE_URL } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
@@ -11,6 +13,27 @@ export const AVATAR_BUCKET = 'avatars';
 
 export function avatarConfig() {
   return { totalCap: readTotalCap(process.env.AVATAR_DAILY_CAP_TOTAL) };
+}
+
+/**
+ * 3D 모형을 만드는 곳(환경 변수 AVATAR_MODEL_PROVIDER: meshy | trellis, 기본 meshy). 동의 글과 3D 확인 글이 이것을 본다.
+ * 일꾼이 쓰는 3D 서비스와 같게 둔다(바꿀 때는 둘을 함께)
+ */
+export function modelProvider(): ModelProvider {
+  return readModelProvider(process.env.AVATAR_MODEL_PROVIDER);
+}
+
+/**
+ * Meshy에 학습 제외를 요청해 답을 받았는가(환경 변수 MESHY_TRAINING_OPTOUT=1). 동의 글·3D 확인·개인정보 화면의 Meshy 학습
+ * 한 문장이 이것을 따른다. 답을 받기 전에는 켜지 않는다(약관대로 학습에 쓸 수 있다고 알린다)
+ */
+export function meshyTrainingOptOut(): boolean {
+  return readTrainingOptOut(process.env.MESHY_TRAINING_OPTOUT);
+}
+
+/** 3D 요청을 받는가(AVATAR_MODELS=0이면 쉰다. 이미 만든 3D는 그대로 준다) */
+export function modelsOn(): boolean {
+  return !assetOff('model');
 }
 
 /** 비밀 키가 있어야 만들기를 연다(없으면 화면에 「준비 중」). AVATAR_ENABLED=0 이면 잠근다 */

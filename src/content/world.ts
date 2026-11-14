@@ -1,6 +1,8 @@
 // 걸어 다니는 조연당: 놀기 좋게 지어낸 배치다. 실제 평면(작업대의 정본 모형)을 보지 않고 만들었고,
 // 방 크기·위치·연결·창은 실제와 다르다. 가족 생활 공간과 숨은 동선은 넣지 않았다.
 // 단위는 미터. 집 앞면이 z=0, 집 안쪽이 z<0, 마당이 z>0. 1층 바닥 y=0, 2층 바닥 y=L2Y.
+// @ts-expect-error Direct Node TypeScript tests require an explicit extension.
+import { addLivingEasel } from '../walk/atelier-placement.ts';
 import type { Door } from '@/content/rooms';
 import type {
   Box, CeilingSpec, DoorSpec, FloorSpec, Furniture, Hotspot, HouseWorld, Level, Portal, Prop, Ramp, WallSpec, WallStyle, WindowSpec, Zone,
@@ -58,7 +60,7 @@ const OPENINGS: Opening[] = [
   // 1층
   { level: 1, x1: -1, x2: 1, z1: -0.3, z2: 0.3, top: 2.4 }, // 현관문(열림)
   { level: 1, x1: -4.3, x2: -3.7, z1: -2.6, z2: -1.4, top: 2.2, door: { slug: 'atelier', label: '창이 큰 방', style: 'wood' } },
-  { level: 1, x1: -4.3, x2: -3.7, z1: -9.6, z2: -8.4, top: 2.2, door: { slug: 'study', label: '빛이 드는 방', style: 'wood', portal: true } },
+  { level: 1, x1: -4.3, x2: -3.7, z1: -9.6, z2: -8.4, top: 2.2, door: { slug: 'study', label: '글과 빛이 드는 곳', style: 'wood', portal: true } },
   { level: 1, x1: -1.5, x2: 1.5, z1: -3.8, z2: -3.2, top: 2.7 }, // 현관 → 거실 통로
   { level: 1, x1: 3.7, x2: 4.3, z1: -8.6, z2: -7.4, top: 2.2, door: { slug: 'kitchen', label: '주방과 식탁', style: 'wood' } },
   { level: 1, x1: 3.7, x2: 4.3, z1: -2.9, z2: -1.1, top: 2.6 }, // 현관 → 계단 홀
@@ -119,9 +121,9 @@ export const HOTSPOTS: Hotspot[] = [
   { id: 'pine', level: 1, x: -7, z: 9, r: 2.3, title: '앞마당 소나무', line: '쪽지를 걸어 두는 나무예요.', slug: 'pine', kind: 'room' },
   { id: 'lantern', level: 1, x: 6, z: 7, r: 2.0, title: '석등', line: '남겨 주신 종이만큼 불이 밝아져요.', slug: 'lantern', kind: 'lantern' },
   { id: 'entrance', level: 1, x: 0, z: -1.6, r: 1.5, title: '현관', line: '신발을 벗고 이름표를 달아요.', slug: 'entrance', kind: 'room' },
-  { id: 'living', level: 1, x: 0, z: -9.6, r: 2.0, title: '1층 거실 무대', line: '이 집에 사는 다섯 사람을 소개하는 작은 무대예요.', slug: 'living', kind: 'stage' },
+  { id: 'living', level: 1, x: 0, z: -9.6, r: 2.0, title: '1층 거실 무대', line: '이 집에 사는 다섯 사람을 소개하는 작은 무대예요.', slug: 'living', kind: 'stage', game: 'who' },
   { id: 'atelier', level: 1, x: -3.4, z: -2, r: 1.2, title: '창이 큰 방', line: '창틀에 그림엽서를 그리는 방.', slug: 'atelier', kind: 'door' },
-  { id: 'study', level: 1, x: -3.4, z: -9, r: 1.2, title: '빛이 드는 방', line: '바닥에 드는 빛 무늬 아래 좋은 문장을 걸어 두는 방이에요.', slug: 'study', kind: 'portal' },
+  { id: 'study', level: 1, x: -3.4, z: -9, r: 1.2, title: '글과 빛이 드는 곳', line: '바닥에 드는 빛 무늬 아래 좋은 문장을 걸어 두는 방이에요.', slug: 'study', kind: 'portal' },
   { id: 'kitchen', level: 1, x: 3.4, z: -8, r: 1.2, title: '주방과 식탁', line: '함께 차리는 식탁.', slug: 'kitchen', kind: 'door' },
   { id: 'guest', level: 1, x: 5.8, z: -4.3, r: 1.0, title: '손님방', line: '정돈된 침대와 방명록 책상이 있는 조용한 방이에요.', slug: 'guest', kind: 'portal' },
   { id: 'stairs', level: 1, x: 7.6, z: -0.8, r: 1.3, title: '2층으로', line: '계단을 오르면 박공 아래 거실이에요.', kind: 'sign' },
@@ -155,7 +157,7 @@ export const FURNITURE: Furniture[] = [
   { kind: 'sofa', level: 1, x1: -3.9, x2: -3.0, z1: -8.3, z2: -5.7, face: '+x', collide: true },
   { kind: 'armchair', level: 1, x1: 2.2, x2: 3.1, z1: -7.4, z2: -6.4, face: '-x', collide: true },
   { kind: 'coffeeTable', level: 1, x1: -0.7, x2: 0.7, z1: -7.4, z2: -6.6, collide: true },
-  { kind: 'bookshelf', level: 1, x1: 3.5, x2: 3.95, z1: -11.6, z2: -9.2, face: '-x', collide: true },
+  { kind: 'bookshelf', level: 1, x1: -3.95, x2: -3.5, z1: -11.6, z2: -10.4, face: '+x', collide: true },
   { kind: 'floorLamp', level: 1, x1: -3.55, x2: -3.15, z1: -10.3, z2: -9.9, collide: true },
   { kind: 'recordCabinet', level: 1, x1: 3.45, x2: 3.95, z1: -5.6, z2: -4.2, face: '-x', collide: true },
   { kind: 'stage', level: 1, x1: -3, x2: 3, z1: -11.9, z2: -10.6, collide: true },
@@ -183,11 +185,11 @@ export const SPAWN = { x: 0, z: 15.5, yaw: 0 };
 
 /**
  * 방 장면으로 들어가는 문. 방에서 나오면 늘 이 자리에 이 방향을 보고 선다(문을 등지고 집 안쪽을 본다).
- * 빛이 드는 방은 1층 거실 쪽 문 앞, 재즈가 흐르는 방은 박공 아래 거실 한가운데, 새로 낸 두 문은 박공 아래 거실 쪽 문 앞,
+ * 글과 빛이 드는 곳은 1층 거실 쪽 문 앞, 재즈가 흐르는 방은 박공 아래 거실 한가운데, 새로 낸 두 문은 박공 아래 거실 쪽 문 앞,
  * 좋아하는 것 방은 2층 계단참 벽 문 앞, 손님방은 1층 계단 홀 안쪽 벽 문 앞, 작업 차고는 박공 아래 거실 벽 문 앞.
  */
 export const PORTALS: Portal[] = [
-  { slug: 'study', level: 1, x: -3.4, z: -9.0, yaw: -Math.PI / 2, label: '빛이 드는 방' },
+  { slug: 'study', level: 1, x: -3.4, z: -9.0, yaw: -Math.PI / 2, label: '글과 빛이 드는 곳' },
   { slug: 'gable', level: 2, x: 0, z: -6.4, yaw: 0, label: '재즈가 흐르는 방' },
   { slug: 'target', level: 2, x: 3.4, z: -5.35, yaw: 0, label: '종이공 과녁 방' },
   { slug: 'mind', level: 2, x: -3.4, z: -5.35, yaw: 0, label: '생각 지도 방' },
@@ -284,12 +286,12 @@ export function buildWorld(doorStates: Record<string, Door> = {}): HouseWorld {
     RAIL,
     GATE_BLOCK,
   ];
-  return {
-    kind: 'redrawn', floor2: L2Y, house: HOUSE, floors: FLOORS, walls, headers, doors, ceilings: CEILINGS, windows: WINDOWS,
+  return addLivingEasel({
+    kind: 'redrawn', floor2: L2Y, house: HOUSE, floors: FLOORS, walls, headers, doors, ceilings: CEILINGS, windows: [...WINDOWS, { level: 1, axis: 'x', at: -12, from: 3.05, to: 3.85, sill: 0.35, top: 2.6 }],
     furniture: FURNITURE, props: PROPS, zones: ZONES, hotspots: HOTSPOTS, spawn: SPAWN,
     physics: { boxes, ramps: [STAIRS], floor2: L2Y },
     portals: PORTALS.map((p) => ({ ...p })),
-  };
+  });
 }
 
 type Lookup = Pick<HouseWorld, 'zones' | 'hotspots'>;

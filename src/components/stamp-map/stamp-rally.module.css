@@ -1,0 +1,529 @@
+/* 도장 투어 콜라주 맵과 전각 인장 (web-v2 미니멀 포스터 톤). 색과 글꼴은 모두 globals.css 토큰만 사용 */
+
+.wrap { display: grid; gap: 28px; }
+
+.kicker {
+  margin: 0 0 4px;
+  font-family: var(--font-en);
+  font-size: 0.74em;
+  letter-spacing: 0.2em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+/* 미니멀 점선 진행률 줄 */
+.progressStrip {
+  display: grid;
+  gap: 12px;
+  padding: 16px 0 18px;
+  border-top: 1px dashed var(--line-2);
+  border-bottom: 1px dashed var(--line-2);
+}
+.progressTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.progressTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.handLabel {
+  font-family: var(--font-hand);
+  font-size: 1.38em;
+  font-weight: 700;
+  color: var(--ink);
+}
+.progressCount {
+  font-family: var(--font-en);
+  font-size: 1.24em;
+  color: var(--art-vermilion);
+  font-variant-numeric: tabular-nums;
+}
+
+.modeTabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+}
+.modeTab {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modeTab[data-active] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.barTrack {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--art-green), var(--art-cobalt), var(--art-vermilion));
+  transition: width 0.35s ease;
+}
+
+.zoneBadges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.zoneBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-family: var(--font-serif);
+  font-size: 0.82em;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+.zoneBadge[data-done] {
+  border-color: var(--art-green);
+  color: var(--art-green);
+  font-weight: 700;
+}
+.readyAlert {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px;
+  border-radius: 999px;
+  font-size: 0.82em;
+  font-weight: 800;
+  background: color-mix(in srgb, var(--art-yellow) 28%, var(--paper));
+  border: 1px solid var(--oak);
+  color: var(--ink);
+}
+.trialNotice {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 0.88em;
+  color: var(--ink-2);
+}
+.trialNotice a {
+  font-weight: 700;
+  color: var(--art-vermilion);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.liveToast {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  width: fit-content;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--art-vermilion) 10%, var(--paper));
+  border: 1px solid var(--art-vermilion);
+  color: var(--art-vermilion);
+}
+
+/* 맵 + 포스터 안내 시트 레이아웃 */
+.rallyLayout {
+  display: grid;
+  gap: 24px;
+  align-items: start;
+}
+
+.boardFrame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px dashed var(--line-2);
+  background: var(--paper);
+  aspect-ratio: 9 / 16;
+}
+.boardPic, .boardImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (prefers-color-scheme: dark) {
+  .boardImg { filter: brightness(0.84) contrast(1.03); }
+}
+:global(:root[data-theme="dark"]) .boardImg { filter: brightness(0.84) contrast(1.03); }
+:global(:root[data-theme="light"]) .boardImg { filter: none; }
+
+/* 크레용 구슬 핀 레이어 */
+.pinLayer {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pinItem {
+  position: absolute;
+  left: var(--px);
+  top: var(--py);
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+.pinItem:has(.pinBtn[data-active]) { z-index: 6; }
+
+.pinBtn {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+}
+.pinOrbWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.22));
+  transition: transform 0.2s cubic-bezier(0.2, 1.25, 0.35, 1);
+}
+.pinOrbCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pinNum {
+  position: absolute;
+  font-family: var(--font-en);
+  font-size: 0.78em;
+  font-weight: 700;
+  color: #fffdf7;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
+.pinBtn[data-status="visited"] .pinNum {
+  color: #23211d;
+  text-shadow: 0 1px 2px rgb(255 255 255 / 0.7);
+}
+.pinBtn:hover .pinOrbWrap { transform: translateY(-4px) scale(1.08); }
+.pinBtn[data-active] .pinOrbWrap {
+  transform: translateY(-5px) scale(1.18);
+}
+.pinReadyDot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--art-vermilion);
+  color: #fffdf7;
+  font-size: 0.7em;
+  font-weight: 900;
+  border: 1.5px solid var(--paper);
+}
+.pinCaption {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-family: var(--font-hand);
+  font-size: 0.92em;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+}
+.pinBtn[data-active] .pinCaption {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+
+/* 맵 위에 찍힌 전각 인장 */
+.mapStampedSeal {
+  display: inline-grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.14);
+  transition: transform 0.16s ease;
+}
+.pinBtn[data-active] .mapStampedSeal {
+  outline: 2px solid var(--ink);
+  transform: scale(1.08);
+}
+
+/* 전각 인장 SVG */
+.sealFrame {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--seal-px, 92px);
+  height: var(--seal-px, 92px);
+}
+.sealSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--art-vermilion);
+  transform: rotate(var(--seal-rot, -5deg));
+}
+.sealFrame[data-state="stamped"] .sealSvg {
+  color: var(--art-vermilion);
+}
+.sealFrame[data-state="trial"] .sealSvg {
+  color: var(--art-cobalt);
+}
+.sealFrame[data-state="ready"] .sealSvg {
+  color: var(--art-orange);
+}
+.sealFrame[data-state="empty"] .sealSvg {
+  color: var(--ink-3);
+  opacity: 0.62;
+}
+.sealRing {
+  position: absolute;
+  inset: 4%;
+  border-radius: 20%;
+  border: 3px solid var(--art-vermilion);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 선택한 지점 미니멀 한지 포스터 패널 */
+.spotDetail {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--paper-2) 55%, var(--paper));
+  border: 1px solid var(--line-2);
+}
+.spotDetailHead {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--line-2);
+}
+.spotOrder {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+.spotName {
+  margin: 2px 0 6px;
+  font-family: var(--font-hand);
+  font-size: 1.65em;
+  font-weight: 700;
+  line-height: 1.15;
+}
+.spotStateChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.76em;
+  font-weight: 700;
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+.spotStateChip[data-status="stamped"] {
+  background: color-mix(in srgb, var(--art-vermilion) 12%, var(--paper));
+  border-color: var(--art-vermilion);
+  color: var(--art-vermilion);
+}
+.spotStateChip[data-status="visited"] {
+  background: color-mix(in srgb, var(--art-yellow) 26%, var(--paper));
+  border-color: var(--oak);
+  color: var(--ink);
+}
+.spotCharm {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 0.94em;
+  color: var(--ink);
+  line-height: 1.72;
+}
+.spotQuest {
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px dashed var(--line-2);
+  border-bottom: 1px dashed var(--line-2);
+  font-family: var(--font-serif);
+  font-size: 0.88em;
+  color: var(--ink-2);
+  line-height: 1.65;
+}
+.spotActions { display: grid; gap: 8px; }
+.stampActionBtn { width: 100%; min-height: 48px; }
+.fillBtn {
+  width: 100%;
+  min-height: 46px;
+  background: color-mix(in srgb, var(--ink) 78%, var(--paper));
+  border-color: color-mix(in srgb, var(--ink) 78%, var(--paper));
+  color: var(--paper);
+}
+.fillBtn:hover {
+  background: var(--art-vermilion);
+  border-color: var(--art-vermilion);
+  color: #fffdf7;
+}
+.outlineBtn {
+  width: 100%;
+  min-height: 44px;
+  background: transparent;
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+}
+.outlineBtn:hover { background: var(--paper-2); }
+
+.spotPager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 4px;
+}
+.pagerNum {
+  font-family: var(--font-en);
+  font-size: 0.84em;
+  color: var(--ink-3);
+}
+
+/* 개별 방 페이지 안의 도장 시트 */
+.roomStampCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 18px 0;
+  border-top: 1px dashed var(--line-2);
+  border-bottom: 1px dashed var(--line-2);
+}
+.roomStampBody { display: grid; gap: 6px; }
+.roomStampKicker {
+  margin: 0;
+  font-family: var(--font-en);
+  font-size: 0.74em;
+  letter-spacing: 0.14em;
+  color: var(--art-vermilion);
+  text-transform: uppercase;
+}
+.roomStampTitle {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 1.38em;
+  font-weight: 700;
+}
+.roomStampDesc {
+  margin: 0 0 4px;
+  font-family: var(--font-serif);
+  font-size: 0.9em;
+  color: var(--ink-2);
+}
+.stampedDoneBtn {
+  color: var(--art-vermilion);
+  border-color: var(--art-vermilion);
+  background: color-mix(in srgb, var(--art-vermilion) 10%, var(--paper));
+}
+
+/* 완주 기념 인장첩 */
+.keepsake {
+  display: grid;
+  gap: 18px;
+  padding: 28px 24px;
+  border-radius: 20px;
+  background: var(--paper-2);
+  border: 1.5px dashed var(--art-vermilion);
+}
+.keepsakeTitle {
+  margin: 2px 0 6px;
+  font-family: var(--font-hand);
+  font-size: 1.75em;
+}
+.keepsakeSub {
+  margin: 0;
+  font-family: var(--font-serif);
+  color: var(--ink-2);
+}
+.keepsakeSeals {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 12px;
+}
+.keepsakeCell {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .roomStampCard { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+}
+
+@media (min-width: 720px) {
+  .boardFrame { aspect-ratio: 16 / 9; }
+  .pinItem { left: var(--lx); top: var(--ly); }
+}
+
+@media (min-width: 980px) {
+  .rallyLayout { grid-template-columns: minmax(0, 1.68fr) minmax(300px, 0.92fr); }
+  .spotDetail { position: sticky; top: calc(var(--head-h, 61px) + 16px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sealFrame[data-press] .sealSvg {
+    animation: rally-seal-press 0.58s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+  }
+  .sealFrame[data-press] .sealRing {
+    animation: rally-seal-ring 0.68s ease-out 0.2s both;
+  }
+  .pinBtn[data-status="visited"] .pinOrbWrap {
+    animation: rally-ready-pulse 2.2s ease-in-out infinite;
+  }
+}
+
+@keyframes rally-seal-press {
+  0% { transform: translateY(-28%) scale(1.65) rotate(-16deg); opacity: 0; }
+  45% { transform: translateY(0) scale(0.92) rotate(var(--seal-rot, -5deg)); opacity: 1; }
+  68% { transform: scale(1.06) rotate(var(--seal-rot, -5deg)); }
+  100% { transform: scale(1) rotate(var(--seal-rot, -5deg)); opacity: 1; }
+}
+@keyframes rally-seal-ring {
+  0% { transform: scale(0.84); opacity: 0.65; }
+  100% { transform: scale(1.36); opacity: 0; }
+}
+@keyframes rally-ready-pulse {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.06); }
+}

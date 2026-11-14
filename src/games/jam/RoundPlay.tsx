@@ -1,10 +1,11 @@
 // 받아 치기 한 판: 한 마디 들려주고 한 마디 받아 친다. 화면은 오디오 시계(들리는 시각)를 따라 그린다.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLang, useTr } from '@/components/i18n/useLang';
 import type { Engine, Transport } from './audio';
 import { DrumArt, Face, IconEar, IconHand } from './icons';
 import { composing, isTypingTarget } from './keys';
 import {
-  ROUNDS, buildRound, heardAt, judgePhrase, nearestVerdict, phraseIndexAt, phraseVerdict, slotTime, swingRatio,
+  ROUNDS, buildRound, heardAt, judgePhrase, judgeWindow, nearestVerdict, phraseIndexAt, phraseVerdict, slotTime, swingRatio,
   type PhraseJudge, type Verdict,
 } from './logic';
 import s from './jam.module.css';
@@ -14,15 +15,19 @@ type Mode = 'count' | 'call' | 'resp' | 'end';
 type View = { mode: Mode; phrase: number; slot: number; count: number; pct: number };
 
 export const VERDICT_TEXT: Record<Verdict, string> = { good: '좋아요', early: '조금 빨라요', late: '조금 늦어요', miss: '다시 들어 봐요' };
+/** 영어 화면의 판정 말(같은 열쇠) */
+export const VERDICT_TEXT_EN: Record<Verdict, string> = { good: 'Nice!', early: 'A bit early', late: 'A bit late', miss: 'Listen again' };
 /** 손가락·키가 닿은 뒤 이벤트가 되기까지(ms, 대략) */
 const INPUT_LAG = { touch: 14, other: 6 };
 /** 북 그림이 번쩍이는 간격의 하한(초당 3번 넘지 않게) */
 const PULSE_GAP = 0.34;
 
-type Props = { round: number; attempt: number; seed: number; audio: Audio; onDone: (judges: PhraseJudge[]) => void };
+type Props = { round: number; attempt: number; seed: number; audio: Audio; coarse?: boolean; onDone: (judges: PhraseJudge[]) => void };
 
-export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
+export function RoundPlay({ round, attempt, seed, audio, coarse = false, onDone }: Props) {
   const spec = ROUNDS[round];
+  // 손가락 기기는 판정 창이 조금 넓다(logic.judgeWindow)
+  const win = useMemo(() => judgeWindow(spec, coarse), [spec, coarse]);
   const tl = useMemo(() => buildRound(seed, round, attempt), [seed, round, attempt]);
   const [view, setView] = useState<View>({ mode: 'count', phrase: 0, slot: -1, count: 0, pct: 0 });
   const [verdicts, setVerdicts] = useState<Array<Verdict | null>>(() => tl.phrases.map(() => null));
@@ -33,6 +38,9 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
   const st = useRef({ t0: 0, on: false, taps: [] as number[][], judged: [] as Array<PhraseJudge | null>, prev: -9, lastPulse: -9, n: 0, key: '' });
   const doneRef = useRef(onDone);
   const hitRef = useRef<(ms: number, touch: boolean) => void>(() => {});
+  const lang = useLang();
+  const tr = useTr();
+  const verdictText = lang === 'en' ? VERDICT_TEXT_EN : VERDICT_TEXT;
 
   useEffect(() => {
     doneRef.current = onDone;
@@ -87,14 +95,14 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
       // 받아 치기 마디가 지나면 판정
       let changed = false;
       tl.phrases.forEach((p, k) => {
-        if (r.judged[k] || now < p.respEnd + spec.win.ok) return;
-        r.judged[k] = judgePhrase(p.expected, r.taps[k], spec.win);
+        if (r.judged[k] || now < p.respEnd + win.ok) return;
+        r.judged[k] = judgePhrase(p.expected, r.taps[k], win);
         changed = true;
       });
       if (changed) setVerdicts(r.judged.map((j) => (j ? phraseVerdict(j) : null)));
       if (now >= tl.length - 0.1) {
         r.on = false;
-        doneRef.current(r.judged.map((j, k) => j ?? judgePhrase(tl.phrases[k].expected, r.taps[k], spec.win)));
+        doneRef.current(r.judged.map((j, k) => j ?? judgePhrase(tl.phrases[k].expected, r.taps[k], win)));
         return;
       }
       raf = requestAnimationFrame(frame);
@@ -104,10 +112,10 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
       engine.hit();
       if (!r.on) return;
       const t = heardAt(ms, engine.stamp(), touch ? INPUT_LAG.touch : INPUT_LAG.other) - r.t0;
-      const k = phraseIndexAt(tl.phrases, t, spec.win);
+      const k = phraseIndexAt(tl.phrases, t, win);
       if (k < 0 || r.judged[k]) return;
       r.taps[k].push(t);
-      const nv = nearestVerdict(tl.phrases[k].expected, t, spec.win);
+      const nv = nearestVerdict(tl.phrases[k].expected, t, win);
       if (nv) setFlash({ v: nv.verdict, n: ++r.n });
     };
     // 탭이 숨으면 멈춘다(숨은 탭에서는 타이머가 늦어 박이 흐트러진다)
@@ -125,7 +133,7 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
       hitRef.current = (ms, touch) => { void ms; void touch; engine.hit(); };
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [audio, tl, spec, run]);
+  }, [audio, tl, win, run]);
 
   // 스페이스바 = 북(반복 키·입력칸·한글 조합 중은 무시). 단추 위에서 눌러도 단추를 누르지 않게 keyup도 막는다
   useEffect(() => {
@@ -168,10 +176,10 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
 
   const p = tl.phrases[view.phrase];
   const cue =
-    view.mode === 'count' ? { icon: null, text: view.count ? String(view.count) : '준비' }
-    : view.mode === 'call' ? { icon: <IconEar />, text: '들어 봐요' }
-    : view.mode === 'resp' ? { icon: <IconHand />, text: '따라 쳐요' }
-    : { icon: null, text: '끝!' };
+    view.mode === 'count' ? { icon: null, text: view.count ? String(view.count) : tr('준비', 'Ready') }
+    : view.mode === 'call' ? { icon: <IconEar />, text: tr('들어 봐요', 'Listen') }
+    : view.mode === 'resp' ? { icon: <IconHand />, text: tr('따라 쳐요', 'Play it back') }
+    : { icon: null, text: tr('끝!', 'Done!') };
   return (
     <div className={s.round} data-mode={view.mode}>
       <p className={s.cue} aria-live="polite">
@@ -192,7 +200,7 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
             ))}
       </div>
       <div className={s.stage} onPointerDown={onStage}>
-        <button type="button" data-drum="1" className={s.drum} data-pulse={pulse % 2} onClick={onDrumClick} aria-label="북 치기" aria-keyshortcuts="Space">
+        <button type="button" data-drum="1" className={s.drum} data-pulse={pulse % 2} onClick={onDrumClick} aria-label={tr('북 치기', 'Hit the drum')} aria-keyshortcuts="Space">
           <span key={pulse} className={s.drumArt} data-lit={pulse > 0 ? '' : undefined}>
             <DrumArt />
           </span>
@@ -200,13 +208,17 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
         {flash ? (
           <p key={flash.n} className={s.flash} data-v={flash.v} role="status">
             <Face kind={flash.v} />
-            <span>{VERDICT_TEXT[flash.v]}</span>
+            <span>{verdictText[flash.v]}</span>
           </p>
         ) : null}
       </div>
-      <ol className={s.phrases} aria-label={`${round + 1}판 마디 결과`}>
+      <ol className={s.phrases} aria-label={tr(`${round + 1}판 마디 결과`, `Round ${round + 1} bar results`)}>
         {verdicts.map((v, k) => (
-          <li key={k} data-v={v ?? undefined} aria-label={v ? `${k + 1}번째 마디 ${VERDICT_TEXT[v]}` : `${k + 1}번째 마디 아직`}>
+          <li
+            key={k}
+            data-v={v ?? undefined}
+            aria-label={v ? tr(`${k + 1}번째 마디 ${VERDICT_TEXT[v]}`, `Bar ${k + 1}: ${VERDICT_TEXT_EN[v]}`) : tr(`${k + 1}번째 마디 아직`, `Bar ${k + 1}: not yet`)}
+          >
             {v ? <Face kind={v} /> : <span className={s.pending} />}
           </li>
         ))}
@@ -214,12 +226,12 @@ export function RoundPlay({ round, attempt, seed, audio, onDone }: Props) {
       <div className={s.progress} aria-hidden="true">
         <span style={{ width: `${view.pct}%` }} />
       </div>
-      <p className={s.hint}>북 단추나 화면을 톡, 키보드는 Space</p>
+      <p className={s.hint}>{tr('북 단추나 화면을 톡, 키보드는 Space', 'Tap the drum or the screen, or press Space')}</p>
       {paused ? (
-        <div className={s.pause} role="alertdialog" aria-label="잠깐 멈췄어요">
-          <p>잠깐 멈췄어요</p>
+        <div className={s.pause} role="alertdialog" aria-label={tr('잠깐 멈췄어요', 'Paused')}>
+          <p>{tr('잠깐 멈췄어요', 'Paused')}</p>
           <button type="button" className={s.primary} onClick={resume} autoFocus>
-            이 판 다시 하기
+            {tr('이 판 다시 하기', 'Replay this round')}
           </button>
         </div>
       ) : null}

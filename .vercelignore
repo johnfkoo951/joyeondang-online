@@ -3,3 +3,9 @@
 .next
 node_modules
 .git
+
+# Generation sources and private visual verification evidence are not deployment inputs.
+private/environment-assets
+
+# Lettering originals, local provenance and visual test evidence.
+private/lettering-assets

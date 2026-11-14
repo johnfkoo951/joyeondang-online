@@ -82,6 +82,15 @@ export function IconRoute({ size }: P) {
   );
 }
 
+/** 펼치기: 아래를 보는 꺾쇠(누르면 목록이 열린다) */
+export function IconChevron({ size }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 /** 점프: 위로 뛰는 화살표와 바닥 */
 export function IconJump({ size }: P) {
   return (
@@ -92,11 +101,50 @@ export function IconJump({ size }: P) {
   );
 }
 
+/** 앉기: 바닥에 다리를 뻗고 앉은 사람 */
+export function IconSit({ size }: P) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="8.5" cy="5.5" r="2.2" />
+      <path d="M8.5 9v6.5H17v-2.5M8.5 11.5l3.5 2.5" />
+      <path d="M4 19.5h16" />
+    </svg>
+  );
+}
+
 /** 말하기: 말풍선 */
 export function IconChat({ size }: P) {
   return (
     <svg {...base(size)}>
       <path d="M4.5 5.5h15v10h-8l-4.5 3.5v-3.5h-2.5Z" />
+    </svg>
+  );
+}
+
+/** 말 숨기기: 빗금 친 말풍선 */
+export function IconChatOff({ size }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="M8.5 5.5h11v10h-1.5M14 15.5h-2.5l-4.5 3.5v-3.5h-2.5v-10" />
+      <path d="M3.5 3.5l17 17" />
+    </svg>
+  );
+}
+
+/** 전체 화면으로: 바깥으로 벌린 네 귀퉁이 */
+export function IconExpand({ size }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" />
+    </svg>
+  );
+}
+
+/** 전체 화면 끝내기: 안으로 접은 네 귀퉁이 */
+export function IconShrink({ size }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="M9 4v5H4M15 4v5h5M20 15h-5v5M4 15h5v5" />
     </svg>
   );
 }

@@ -41,6 +41,7 @@ npm run verify     # 개인정보 검사 다음 운영 빌드
 2. **Vercel** 같은 Next.js 호스트: 같은 변수를 넣어요. 서버 전용이고 선택: `SUPABASE_SECRET_KEY`, `HOUSE_WORLD_GZ`(초대 손님에게만 보이는 실제 크기의 집), `FAMILY_ROOMS_JSON`(방 문 이름표).
 3. **게임 서버**(선택): `game-server/`에서 `npx wrangler secret put GAME_TOKEN_SECRET`, `wrangler.jsonc`에 `ALLOWED_ORIGINS`와 내 도메인 경로를 넣고 `npx wrangler deploy`. 사이트에는 `GAME_SERVER_URL`과 같은 `GAME_TOKEN_SECRET`을 넣어요.
 4. **사진 캐릭터**(선택): [worker/avatar/README.md](worker/avatar/README.md). `AVATAR_ENABLED=1`일 때만 켜져요. 캐릭터는 늘 다정하게 그려요.
+5. **부엌 사진 갤러리**(실제 집에만): 이름표가 부엌인 구역의 빈 벽 구간에 빈 액자를 걸어요(`src/walk/gallery.ts`). 전시물은 비공개 저장소 버킷 `gallery`(`manifest.json`과 그림)에 두고 승인함에서 채워요. 손님은 짧게 쓰는 서명 주소로 받아요. `KITCHEN_GALLERY=1`일 때만 액자를 걸어요(꺼 둔 동안에도 승인함에서 미리 채울 수 있어요).
 
 ## 개인정보 검사
 

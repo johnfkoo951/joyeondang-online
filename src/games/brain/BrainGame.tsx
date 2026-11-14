@@ -1,13 +1,16 @@
 'use client';
 // 생각 지도 퀴즈: 첫 화면(세 판 퀴즈 · 그림 서랍 놀이) → 1판 서랍 넣기 → 2판 생각이 자라는 순서 → 3판 짝 잇기 → 끝 화면.
 // 덮개 화면이 Esc·닫기를 맡으므로 여기서는 Esc를 쓰지 않는다. 마치거나 그만하면 ctx.onExit(result).
+// 마친 순간(세 판 통과·그림 여섯 장)에 덮개 화면에 결과를 미리 알린다(ctx.report). 손가락 기기는 그림 놀이가 먼저다.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { GameContext } from '../types';
-import { DRAWERS } from './bank';
+import { useLang, useTr } from '@/components/i18n/useLang';
+import { GAMES } from '../registry';
+import type { GameContext, GameResult } from '../types';
+import { DRAWERS, KIDS_DRAWERS } from './bank';
 import { KidsRound } from './KidsRound';
 import { KIDS_COUNT, TOTALS, buildQuiz, kidsResult, quizResult, summarize, type Tally } from './logic';
-import { Icon } from './pictures';
-import { RoundDrawers } from './RoundDrawers';
+import { Icon, Pic } from './pictures';
+import { RoundDrawers, drawerEn } from './RoundDrawers';
 import { RoundOrder } from './RoundOrder';
 import { RoundPairs } from './RoundPairs';
 import { createSound, type Sound, type SoundKind } from './sound';
@@ -23,13 +26,14 @@ export type RoundProps = {
 };
 
 const MUTE_KEY = 'jy.brain.mute.v1'; // gitleaks:allow (localStorage 키 이름, 비밀값 아님)
-const TITLES: Record<View, string> = {
-  home: '생각 지도',
-  r1: '1판 · 서랍 넣기',
-  r2: '2판 · 생각이 자라는 순서',
-  r3: '3판 · 짝 잇기',
-  done: '다 했어요',
-  kids: '그림 서랍 놀이',
+/** 위 줄 제목 [한국어, 영어] */
+const TITLES: Record<View, readonly [string, string]> = {
+  home: ['생각 지도', 'Mind map'],
+  r1: ['1판 · 서랍 넣기', 'Round 1 · Drawers'],
+  r2: ['2판 · 생각이 자라는 순서', 'Round 2 · How thoughts grow'],
+  r3: ['3판 · 짝 잇기', 'Round 3 · Match pairs'],
+  done: ['다 했어요', 'All done'],
+  kids: ['그림 서랍 놀이', 'Picture drawer game'],
 };
 
 /** 판을 열 때의 진행 표시(1판은 문제 수, 2판은 두 단계, 그림 놀이는 넣은 장 수) */
@@ -56,9 +60,12 @@ export function BrainGame({ ctx }: { ctx: GameContext }) {
   const [progress, setProgress] = useState<Progress>(null);
   const [muted, setMuted] = useState(readMuted);
   const quiz = useMemo(() => buildQuiz(ctx.seed), [ctx.seed]);
+  const tr = useTr();
   const sound = useRef<Sound | null>(null);
   const started = useRef(0);
   const kids = useRef({ firstTry: 0, placed: 0 });
+  /** 한 번 마친 결과(그림 놀이를 한 번 더 하다 그만해도 마친 것으로 남긴다) */
+  const clearedOnce = useRef(false);
 
   useEffect(() => {
     started.current = performance.now();
@@ -88,15 +95,29 @@ export function BrainGame({ ctx }: { ctx: GameContext }) {
     setView(v);
   };
 
-  const stop = () => {
-    if (view === 'kids') ctx.onExit(kidsResult(kids.current.firstTry, kids.current.placed, elapsed()));
-    else ctx.onExit(quizResult(tally, elapsed(), false));
+  const keepCleared = (r: GameResult): GameResult => (clearedOnce.current && !r.cleared ? { ...r, cleared: true } : r);
+  const report = (r: GameResult) => {
+    if (r.cleared) clearedOnce.current = true;
+    if (clearedOnce.current) ctx.report?.(keepCleared(r));
   };
 
-  const finishRound = (key: keyof Tally, next: View) => (correct: number) => {
-    setTally((t) => ({ ...t, [key]: correct }));
-    if (next === 'done') play('clear');
+  const stop = () => {
+    if (view === 'kids') ctx.onExit(keepCleared(kidsResult(kids.current.firstTry, kids.current.placed, elapsed())));
+    else ctx.onExit(keepCleared(quizResult(tally, elapsed(), false)));
+  };
+
+  const finishRound = (key: keyof Tally, next: View, correct: number) => {
+    const t = { ...tally, [key]: correct };
+    setTally(t);
+    if (next === 'done') {
+      play('clear');
+      report(quizResult(t, elapsed(), true));
+    }
     go(next);
+  };
+  const countKids = (firstTry: number, placed: number) => {
+    kids.current = { firstTry, placed };
+    if (placed > 0) report(kidsResult(firstTry, placed, elapsed()));
   };
 
   const playing = view === 'r1' || view === 'r2' || view === 'r3' || view === 'kids';
@@ -106,36 +127,36 @@ export function BrainGame({ ctx }: { ctx: GameContext }) {
     <div className={s.root} data-theme={ctx.theme} data-still={ctx.reducedMotion ? '' : undefined} data-coarse={ctx.coarse ? '' : undefined}>
       <div className={s.bar}>
         <p className={s.barTitle}>
-          <span>{TITLES[view]}</span>
+          <span>{tr(...TITLES[view])}</span>
           {progress && (
-            <span className={s.barCount} aria-label={`진행 ${progress.at} / ${progress.of}`}>
+            <span className={s.barCount} aria-label={tr(`진행 ${progress.at} / ${progress.of}`, `Progress ${progress.at} of ${progress.of}`)}>
               {progress.at} / {progress.of}
             </span>
           )}
         </p>
         <div className={s.barBtns}>
-          <button type="button" className={s.iconBtn} onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? '소리 켜기' : '소리 끄기'} title={muted ? '소리 켜기' : '소리 끄기'}>
+          <button type="button" className={s.iconBtn} onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? tr('소리 켜기', 'Unmute') : tr('소리 끄기', 'Mute')} title={muted ? tr('소리 켜기', 'Unmute') : tr('소리 끄기', 'Mute')}>
             <Icon name={muted ? 'soundOff' : 'soundOn'} />
           </button>
           {playing && (
             <button type="button" className={s.btn} onClick={stop}>
-              그만하기
+              <Icon name="door" /> {tr('그만하기', 'Quit')}
             </button>
           )}
         </div>
       </div>
       <div className={s.main}>
-        {view === 'home' && <Home onQuiz={() => go('r1')} onKids={() => go('kids')} />}
-        {view === 'r1' && <RoundDrawers {...rp} cards={quiz.drawers} onDone={finishRound('r1', 'r2')} />}
-        {view === 'r2' && <RoundOrder {...rp} chips={quiz.order.chips} examples={quiz.order.examples} onDone={finishRound('r2', 'r3')} />}
-        {view === 'r3' && <RoundPairs {...rp} cards={quiz.pairs.cards} parents={quiz.pairs.parents} onDone={finishRound('r3', 'done')} />}
-        {view === 'done' && <Done tally={tally} onFinish={() => ctx.onExit(quizResult(tally, elapsed(), true))} />}
+        {view === 'home' && <Home coarse={ctx.coarse} onQuiz={() => go('r1')} onKids={() => go('kids')} />}
+        {view === 'r1' && <RoundDrawers {...rp} cards={quiz.drawers} onDone={(c) => finishRound('r1', 'r2', c)} />}
+        {view === 'r2' && <RoundOrder {...rp} chips={quiz.order.chips} examples={quiz.order.examples} onDone={(c) => finishRound('r2', 'r3', c)} />}
+        {view === 'r3' && <RoundPairs {...rp} cards={quiz.pairs.cards} parents={quiz.pairs.parents} onDone={(c) => finishRound('r3', 'done', c)} />}
+        {view === 'done' && <Done tally={tally} onFinish={() => ctx.onExit(keepCleared(quizResult(tally, elapsed(), true)))} />}
         {view === 'kids' && (
           <KidsRound
             {...rp}
             seed={ctx.seed}
-            onCount={(firstTry, placed) => (kids.current = { firstTry, placed })}
-            onFinish={() => ctx.onExit(kidsResult(kids.current.firstTry, kids.current.placed, elapsed()))}
+            onCount={countKids}
+            onFinish={() => ctx.onExit(keepCleared(kidsResult(kids.current.firstTry, kids.current.placed, elapsed())))}
           />
         )}
       </div>
@@ -143,48 +164,79 @@ export function BrainGame({ ctx }: { ctx: GameContext }) {
   );
 }
 
-function Home({ onQuiz, onKids }: { onQuiz: () => void; onKids: () => void }) {
+function Home({ coarse, onQuiz, onKids }: { coarse: boolean; onQuiz: () => void; onKids: () => void }) {
   const total = TOTALS.r1 + TOTALS.r2 + TOTALS.r3;
+  const lang = useLang();
+  const tr = useTr();
+  const en = lang === 'en';
+  const quiz = (
+    <button key="quiz" type="button" className={s.mode} onClick={onQuiz} autoFocus={!coarse}>
+      <span className={s.modeIcon}>
+        <Icon name="drawers" />
+      </span>
+      <span className={s.modeText}>
+        <strong>{tr('세 판 퀴즈', 'Three-round quiz')}</strong>
+        <span>{tr('서랍 넣기, 생각이 자라는 순서, 짝 잇기', 'Drawers, how thoughts grow, match pairs')}</span>
+        <span className={s.modeNote}>{tr(`모두 ${total}문제, 70%를 넘기면 통과`, `${total} questions, pass with over 70%`)}</span>
+      </span>
+    </button>
+  );
+  // 그림 놀이: 글을 못 읽어도 알아보게 그림 카드 → 같은 색 서랍 미리보기를 붙인다
+  const kids = (
+    <button key="kids" type="button" className={`${s.mode} ${s.modeKids}`} onClick={onKids} autoFocus={coarse} aria-label={tr('그림 서랍 놀이, 그림 카드를 같은 색 서랍에 넣어요. 글을 몰라도 할 수 있어요', 'Picture drawer game: put each picture card in the drawer of the same color. No reading needed')}>
+      <span className={s.modeIcon}>
+        <Icon name="kid" />
+      </span>
+      <span className={s.modeText}>
+        <strong>{tr('그림 서랍 놀이', 'Picture drawer game')}</strong>
+        <span>{tr('그림 카드를 같은 색 서랍에 쏙', 'Pop picture cards into the same-color drawer')}</span>
+        <span className={s.modeNote}>{tr('글을 몰라도 할 수 있어요', 'No reading needed')}</span>
+      </span>
+      <span className={s.modePreview} aria-hidden="true">
+        {KIDS_DRAWERS.map((d) => (
+          <span key={d.id} className={`${s.previewPair} ${s[KIDS_TONE[d.id]]}`}>
+            <span className={s.previewCard}>
+              <Pic name={PREVIEW_CARD[d.id]} />
+            </span>
+            <span className={s.previewArrow}>
+              <Icon name="next" />
+            </span>
+            <span className={s.previewDrawer}>
+              <Pic name={d.id} />
+            </span>
+          </span>
+        ))}
+        <span className={s.previewGo}>
+          <Icon name="play" />
+        </span>
+      </span>
+    </button>
+  );
   return (
-    <section className={s.home} aria-labelledby="brain-home-title">
+    <section className={s.home} data-kids-first={coarse ? '' : undefined} aria-labelledby="brain-home-title">
       <h3 id="brain-home-title" className={s.homeTitle}>
-        생각을 아홉 서랍에 정리해 볼까요?
+        {tr('생각을 아홉 서랍에 정리해 볼까요?', 'Shall we sort thoughts into nine drawers?')}
       </h3>
       <p className={s.lead}>
-        지식은 100부터 900까지 아홉 서랍에 나눠 담고, 연결, 합치기, 키우기, 나누기 차례로 자라요.
+        {tr(
+          '지식은 100부터 900까지 아홉 서랍에 나눠 담고, 연결, 합치기, 키우기, 나누기 차례로 자라요.',
+          'Knowledge goes into nine drawers, 100 to 900, and grows in four steps: Connect, Merge, Develop, Share.',
+        )}
       </p>
-      <div className={s.modes}>
-        <button type="button" className={s.mode} onClick={onQuiz} autoFocus>
-          <span className={s.modeIcon}>
-            <Icon name="drawers" />
-          </span>
-          <span className={s.modeText}>
-            <strong>세 판 퀴즈</strong>
-            <span>서랍 넣기, 생각이 자라는 순서, 짝 잇기</span>
-            <span className={s.modeNote}>모두 {total}문제, 70%를 넘기면 통과</span>
-          </span>
-        </button>
-        <button type="button" className={`${s.mode} ${s.modeKids}`} onClick={onKids}>
-          <span className={s.modeIcon}>
-            <Icon name="kid" />
-          </span>
-          <span className={s.modeText}>
-            <strong>그림 서랍 놀이</strong>
-            <span>그림 카드를 같은 색 서랍에 쏙</span>
-            <span className={s.modeNote}>글을 몰라도 할 수 있어요</span>
-          </span>
-        </button>
-      </div>
+      {/* 영어 화면: 퀴즈 낱말은 한국어라는 것과 글 없이 하는 그림 놀이를 알린다 */}
+      {en && GAMES.brain.koreanNoteEn ? <p className={s.lead}>{GAMES.brain.koreanNoteEn}</p> : null}
+      <div className={s.modes}>{coarse ? [kids, quiz] : [quiz, kids]}</div>
       <details className={s.guide}>
-        <summary>서랍 아홉 개 먼저 보기</summary>
+        <summary>{tr('서랍 아홉 개 먼저 보기', 'See the nine drawers first')}</summary>
         <ol className={s.guideList}>
           {DRAWERS.map((d) => (
             <li key={d.no} data-tone={d.no}>
+              {/* 영어 화면: 영어 이름을 앞에, 퀴즈 낱말과 맞춰 보게 한국어 이름을 곁에(설명은 문제은행 글이라 한국어 그대로) */}
               <b>
-                {d.code} {d.name}
+                {d.code} {en ? drawerEn(d) : d.name}
               </b>{' '}
-              <span lang="en">{d.en}</span>
-              <p>{d.about}</p>
+              {en ? <span lang="ko">{d.name}</span> : <span lang="en">{d.en}</span>}
+              <p lang="ko">{d.about}</p>
             </li>
           ))}
         </ol>
@@ -193,12 +245,17 @@ function Home({ onQuiz, onKids }: { onQuiz: () => void; onKids: () => void }) {
   );
 }
 
+/** 첫 화면 미리보기: 서랍마다 들어갈 그림 카드 하나와 그 서랍 */
+const KIDS_TONE = { read: 'kRead', screen: 'kScreen', make: 'kMake' } as const;
+const PREVIEW_CARD = { read: 'book', screen: 'laptop', make: 'paint' } as const;
+
 function Done({ tally, onFinish }: { tally: Tally; onFinish: () => void }) {
   const sum = summarize(tally);
+  const tr = useTr();
   const rows: Array<[string, number, number]> = [
-    ['1판 서랍 넣기', tally.r1, TOTALS.r1],
-    ['2판 생각이 자라는 순서', tally.r2, TOTALS.r2],
-    ['3판 짝 잇기', tally.r3, TOTALS.r3],
+    [tr('1판 서랍 넣기', 'Round 1 · Drawers'), tally.r1, TOTALS.r1],
+    [tr('2판 생각이 자라는 순서', 'Round 2 · How thoughts grow'), tally.r2, TOTALS.r2],
+    [tr('3판 짝 잇기', 'Round 3 · Match pairs'), tally.r3, TOTALS.r3],
   ];
   return (
     <section className={s.done} aria-labelledby="brain-done-title">
@@ -206,10 +263,10 @@ function Done({ tally, onFinish }: { tally: Tally; onFinish: () => void }) {
         <Icon name="star" />
       </span>
       <h3 id="brain-done-title" className={s.homeTitle} tabIndex={-1}>
-        {sum.cleared ? '생각 지도를 잘 정리했어요' : '조금만 더 하면 돼요'}
+        {sum.cleared ? tr('생각 지도를 잘 정리했어요', 'Your mind map is well sorted') : tr('조금만 더 하면 돼요', 'Almost there')}
       </h3>
       <p className={s.donePercent}>
-        <b>{sum.percent}%</b> ({sum.total}문제 중 {sum.correct}문제)
+        <b>{sum.percent}%</b> {tr(`(${sum.total}문제 중 ${sum.correct}문제)`, `(${sum.correct} of ${sum.total} questions)`)}
       </p>
       <dl className={s.doneRows}>
         {rows.map(([name, ok, of]) => (
@@ -221,9 +278,13 @@ function Done({ tally, onFinish }: { tally: Tally; onFinish: () => void }) {
           </div>
         ))}
       </dl>
-      <p className={s.lead}>{sum.cleared ? '70%를 넘겨 통과했어요.' : '70%를 넘기면 통과예요. 다시 하면 다른 문제가 나와요.'}</p>
+      <p className={s.lead}>
+        {sum.cleared
+          ? tr('70%를 넘겨 통과했어요.', 'You passed with over 70%.')
+          : tr('70%를 넘기면 통과예요. 다시 하면 다른 문제가 나와요.', 'Over 70% passes. Play again for new questions.')}
+      </p>
       <button type="button" className={`${s.btn} ${s.btnPrimary}`} onClick={onFinish} autoFocus>
-        마치기
+        <Icon name="check" /> {tr('마치기', 'Finish')}
       </button>
     </section>
   );

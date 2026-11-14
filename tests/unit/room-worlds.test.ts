@@ -54,9 +54,9 @@ test('방 장면 일곱은 방 세계 모양이고 rooms.ts에 있는 방이다'
     assert.equal(w.portals, undefined);
     assert.equal(w.props.length, 0, '지붕·바깥 소품 없음');
     const wide = w.house.x2 - w.house.x1, deep = w.house.z2 - w.house.z1;
-    assert.ok(wide >= 4.5 && wide <= 6.5 && deep >= 5 && deep <= 7, `${slug} 크기 ${wide}×${deep}`);
+    assert.ok(wide >= 4.5 && wide <= 11.0 && deep >= 5 && deep <= 10.5, `${slug} 크기 ${wide}×${deep}`);
     assert.equal(w.ceilings.length >= 1, true);
-    for (const c of w.ceilings) assert.ok(c.y >= 2.4 && c.y <= 3.0, `${slug} 천장 ${c.y}`);
+    for (const c of w.ceilings) assert.ok(c.y >= 2.4 && c.y <= 3.5, `${slug} 천장 ${c.y}`);
     assert.ok(w.windows.length >= 1, `${slug} 창 없음`);
     assert.equal(w.doors.length, 1);
     assert.equal(w.doors[0].closed, true, '나가는 문은 닫힌 문짝(들어가기·나가기는 단추로)');
@@ -85,8 +85,8 @@ test('박공 아래 거실은 재즈만, 좋아하는 것 방은 아이 취향 �
   for (const k of ['toyShelf', 'playMat', 'toyChest', 'blockTower', 'playTent'] as const) assert.ok(!gable.has(k), `박공 아래 거실에 ${k}`);
   const toybox = kinds('toybox');
   for (const k of ['toyShelf', 'playMat', 'toyChest', 'blockTower', 'playTent'] as const) assert.ok(toybox.has(k), `좋아하는 것 방에 ${k} 없음`);
-  assert.deepEqual(buildRoomWorld('gable')!.room?.games, ['jam']);
-  assert.deepEqual(buildRoomWorld('toybox')!.room?.games, ['shelf']);
+  assert.deepEqual(buildRoomWorld('gable')!.room?.games, ['jam', 'groove', 'pitch']);
+  assert.deepEqual(buildRoomWorld('toybox')!.room?.games, ['sword', 'shelf']);
 });
 
 test('문 앞에서 나가는 문과 모든 놀이 자리까지 걸어서 닿고, 벽이 닫혀 방 밖으로 못 나간다', () => {
@@ -148,7 +148,7 @@ test('포털 문짝은 문패가 열려도 닫혀 있고(방 장면으로만 들
 
 test('공개 묶음 글에 실명·장소 이름·방 ID·방위가 없다', () => {
   const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
-  for (const file of ['src/content/room-worlds.ts', 'src/content/rooms.ts', 'src/content/world.ts']) {
+  for (const file of ['src/content/room-worlds.ts', 'src/content/room-exhibits.ts', 'src/content/rooms.ts', 'src/content/world.ts']) {
     const src = readFileSync(new URL(`../../${file}`, import.meta.url), 'utf8');
     assert.deepEqual(scan(src, ALWAYS), [], file);
     assert.deepEqual(scan(strip(src), TEXT_ONLY), [], file);

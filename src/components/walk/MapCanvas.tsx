@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { drawMap, type MapMode, type MapTheme } from '@/walk/minimap';
+import { walkLang } from '@/walk/lang';
 import type { WalkState } from '@/walk/scene';
 import type { HouseWorld } from '@/walk/types';
 
@@ -15,11 +16,7 @@ const subscribeTheme = (cb: () => void) => {
     mo.disconnect();
   };
 };
-const readTheme = (): MapTheme => {
-  const t = document.documentElement.dataset.theme;
-  if (t === 'dark' || t === 'light') return t;
-  return window.matchMedia(DARK).matches ? 'dark' : 'light';
-};
+const readTheme = (): MapTheme => (document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
 
 /** 사이트 테마(data-theme가 있으면 그것, 없으면 기기 설정)를 지도 색표로 */
 export function useMapTheme(): MapTheme {
@@ -79,16 +76,20 @@ export function MapCanvas({ world, read, mode, theme, onState }: Props) {
       const s = get();
       if (s) tell?.(s);
       const st = s ?? { x: world.spawn.x, z: world.spawn.z, level: 1 as const, yaw: world.spawn.yaw };
-      const key = `${st.x.toFixed(2)}|${st.z.toFixed(2)}|${st.level}|${st.yaw.toFixed(3)}|${w}x${h}@${dpr}|${th}`;
+      // 화면 말과 가까운 자리(강조)도 열쇠에 넣는다: 언어를 바꾸거나 자리에 다가가면 서 있어도 다시 그린다
+      const near = s?.activeSpotId ?? null;
+      const lang = walkLang();
+      const key = `${st.x.toFixed(2)}|${st.z.toFixed(2)}|${st.level}|${st.yaw.toFixed(3)}|${w}x${h}@${dpr}|${th}|${lang}|${near ?? ''}`;
       if (key === lastKey) return;
       lastKey = key;
+      // 지우기는 여기서 한 번만 한다(drawMap은 지우지 않는다). 화소 크기 그대로라 가장자리가 남지 않는다
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, c.width, c.height);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       try {
         // 방 장면은 한 층뿐이라 전체 지도도 방 평면 한 장만(mini 그리기를 크게)
         const draw = world.kind === 'room' ? 'mini' : mode;
-        drawMap(ctx, world, { x: st.x, z: st.z, level: st.level, yaw: st.yaw }, { mode: draw, width: w, height: h, theme: th });
+        drawMap(ctx, world, { x: st.x, z: st.z, level: st.level, yaw: st.yaw, activeSpotId: near }, { mode: draw, width: w, height: h, theme: th, lang });
       } catch {
         // 지도가 그려지지 않아도 걷기는 계속된다
       }

@@ -1,6 +1,8 @@
 // 생각 지도 퀴즈 문제은행. 근거는 공개된 CMDS 아홉 분류 설명(100~900과 그 아래 칸)뿐이다.
 // 카드마다 정답 서랍 번호(drawer, 1~9)와 실제 하위 칸 번호(code)를 적는다. code의 백의 자리 = drawer.
 // 사람 이름·고객사명·장소명은 쓰지 않는다. 화면 글에 엠대시를 쓰지 않는다(시험이 검사).
+// 영어 화면: 문제은행의 낱말·풀이·예시는 한국어 그대로 둔다(lang="ko"). 서랍·단계는 공개 문서의 영어 이름(en)을,
+// 그림 놀이의 서랍·카드는 그림이 보여 주는 물건이라 영어 이름(en)을 쓴다.
 
 export type DrawerNo = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
@@ -12,7 +14,9 @@ export type Drawer = {
   name: string;
   /** 공개 문서의 영어 이름 */
   en: string;
-  /** 서랍 앞에 붙는 한 줄(무엇이 드는지) */
+  /** 영어 화면에서 쓰는 짧은 이름(없으면 en). 휴대폰 서랍 칸에서 낱말이 가운데서 끊기지 않게, 화면 어디서나 이 이름(drawerEn) */
+  enShort?: string;
+  /** 서랍 앞에 붙는 한 줄(무엇이 드는지). 좁은 서랍에서 낱말 가운데가 끊기지 않게 쉼표와 띄어쓰기로 잇는다 */
   hint: string;
   /** 서랍 안내에 쓰는 조금 긴 설명 */
   about: string;
@@ -34,9 +38,9 @@ export type Stage = { id: StageId; name: string; en: string; about: string };
 export type Example = { id: string; stage: StageId; text: string };
 
 export type KidsDrawerId = 'read' | 'screen' | 'make';
-export type KidsDrawer = { id: KidsDrawerId; drawer: DrawerNo; name: string };
+export type KidsDrawer = { id: KidsDrawerId; drawer: DrawerNo; name: string; /** 영어 이름 */ en: string };
 export type Picture = 'book' | 'books' | 'laptop' | 'phone' | 'paint' | 'music';
-export type KidsCard = { id: Picture; name: string; to: KidsDrawerId; why: string };
+export type KidsCard = { id: Picture; name: string; /** 영어 이름 */ en: string; to: KidsDrawerId; why: string };
 
 export type Bank = {
   drawers: Drawer[];
@@ -48,21 +52,21 @@ export type Bank = {
 };
 
 export const DRAWERS: Drawer[] = [
-  { no: 1, code: 100, name: '주제', en: 'Themes', hint: '관심사·주제·변수·용어',
+  { no: 1, code: 100, name: '주제', en: 'Themes', hint: '관심사, 주제, 변수, 용어',
     about: '궁금한 것이 처음 들어오는 서랍이에요. 관심사, 탐구할 주제, 연구 변수, 낯선 용어를 모아요.' },
-  { no: 2, code: 200, name: '문헌', en: 'Literature', hint: '개념·이론·문헌·책',
+  { no: 2, code: 200, name: '문헌', en: 'Literature', hint: '개념, 이론, 문헌, 책',
     about: '밖에서 읽은 지식을 내 이해로 엮는 서랍이에요. 개념, 프레임워크, 모형, 이론, 고전, 문헌 리뷰, 책 노트, 나만의 통찰.' },
-  { no: 3, code: 300, name: '데이터', en: 'Data', hint: '데이터·설문·DB',
+  { no: 3, code: 300, name: '데이터', en: 'Data', hint: '데이터, 설문, DB',
     about: '재고 모은 자료를 다루는 서랍이에요. 척도, 설문지, 패널 데이터, 데이터 관리, 데이터베이스.' },
-  { no: 4, code: 400, name: '방법론', en: 'Methodologies', hint: '연구 방법·통계·코드·프롬프트',
+  { no: 4, code: 400, name: '방법론', en: 'Methodologies', enShort: 'Methods', hint: '연구 방법, 통계, 코드, 프롬프트',
     about: '자료를 분석하고 일을 해내는 방법의 서랍이에요. 연구 설계, 양적·질적 연구, 통계, 머신러닝, 코드, 프롬프트, 스크립트.' },
-  { no: 5, code: 500, name: '도구', en: 'Products', hint: '옵시디언·ChatGPT·Claude 같은 도구',
+  { no: 5, code: 500, name: '도구', en: 'Products', hint: '옵시디언, ChatGPT, Claude 같은 도구',
     about: '쓰는 도구를 익히는 서랍이에요. 옵시디언, 노션, ChatGPT, Claude, Gemini, 그림 AI, 자동화 도구.' },
-  { no: 6, code: 600, name: '전문 분야', en: 'Specialties', hint: '지식관리·세컨드 브레인·생성형 AI',
+  { no: 6, code: 600, name: '전문 분야', en: 'Specialties', enShort: 'Fields', hint: '지식관리, 세컨드 브레인, 생성형 AI',
     about: '오래 깊게 파는 분야의 서랍이에요. 지식관리, 세컨드 브레인, 제텔카스텐, 생산성, 생성형 AI, 개발, 교육.' },
-  { no: 7, code: 700, name: '창작', en: 'Creatives', hint: '유튜브·SNS·음악·디자인',
+  { no: 7, code: 700, name: '창작', en: 'Creatives', hint: '유튜브, SNS, 음악, 디자인',
     about: '지식을 표현으로 바꾸는 서랍이에요. 유튜브, SNS, 음악, 재즈, 이미지, 디지털 아트와 디자인.' },
-  { no: 8, code: 800, name: '산출물', en: 'Outputs', hint: '논문·글·책·강의·컨설팅',
+  { no: 8, code: 800, name: '산출물', en: 'Outputs', hint: '논문, 글, 책, 강의, 컨설팅',
     about: '남에게 내놓는 결과물의 서랍이에요. 논문, 글, 책 원고, 웹페이지, 연구, 학회 발표, 컨설팅, 강의, 커리큘럼.' },
   { no: 9, code: 900, name: '부문', en: 'Divisions', hint: '일하는 부문',
     about: '이 모든 일을 나눠 맡아 꾸리는 일의 부문이에요. 연구, 글쓰기, 가르치기, 창작, 분석, 협력, 개발, 행사, 컨설팅 부문.' },
@@ -93,18 +97,18 @@ export const EXAMPLES: Example[] = [
 
 /** 어린아이 판: 그림 카드 여섯 장을 같은 색 서랍 셋에 */
 export const KIDS_DRAWERS: KidsDrawer[] = [
-  { id: 'read', drawer: 2, name: '책 서랍' },
-  { id: 'screen', drawer: 5, name: '화면 서랍' },
-  { id: 'make', drawer: 7, name: '만들기 서랍' },
+  { id: 'read', drawer: 2, name: '책 서랍', en: 'Book drawer' },
+  { id: 'screen', drawer: 5, name: '화면 서랍', en: 'Screen drawer' },
+  { id: 'make', drawer: 7, name: '만들기 서랍', en: 'Making drawer' },
 ];
 
 export const KIDS_CARDS: KidsCard[] = [
-  { id: 'book', name: '그림책', to: 'read', why: '책은 읽는 것이라 200 문헌 서랍에 넣어요.' },
-  { id: 'books', name: '책 더미', to: 'read', why: '책이 여러 권이어도 200 문헌 서랍이에요.' },
-  { id: 'laptop', name: '컴퓨터', to: 'screen', why: '컴퓨터는 쓰는 도구라 500 도구 서랍에 넣어요.' },
-  { id: 'phone', name: '휴대폰', to: 'screen', why: '휴대폰도 도구라 500 도구 서랍이에요.' },
-  { id: 'paint', name: '물감과 붓', to: 'make', why: '그림 그리기는 만드는 일이라 700 창작 서랍이에요.' },
-  { id: 'music', name: '노래', to: 'make', why: '노래 부르기도 만드는 일이라 700 창작 서랍이에요.' },
+  { id: 'book', name: '그림책', en: 'Picture book', to: 'read', why: '책은 읽는 것이라 200 문헌 서랍에 넣어요.' },
+  { id: 'books', name: '책 더미', en: 'Stack of books', to: 'read', why: '책이 여러 권이어도 200 문헌 서랍이에요.' },
+  { id: 'laptop', name: '컴퓨터', en: 'Computer', to: 'screen', why: '컴퓨터는 쓰는 도구라 500 도구 서랍에 넣어요.' },
+  { id: 'phone', name: '휴대폰', en: 'Phone', to: 'screen', why: '휴대폰도 도구라 500 도구 서랍이에요.' },
+  { id: 'paint', name: '물감과 붓', en: 'Paints and brush', to: 'make', why: '그림 그리기는 만드는 일이라 700 창작 서랍이에요.' },
+  { id: 'music', name: '노래', en: 'Song', to: 'make', why: '노래 부르기도 만드는 일이라 700 창작 서랍이에요.' },
 ];
 
 /** 낱말 카드이자 하위 서랍. 1판(서랍 넣기)과 3판(짝 잇기)이 여기서 서로 겹치지 않게 고른다 */

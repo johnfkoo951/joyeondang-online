@@ -1,7 +1,10 @@
 'use server';
 import { refresh } from 'next/cache';
-import { makeCode } from '@/lib/code';
+import { ROOM_BY_SLUG } from '@/content/rooms';
+import { makeCode, normalizeCode } from '@/lib/code';
 import { SITE_URL } from '@/lib/env';
+import { eventWindow, qrEventDay, testWindow } from '@/lib/qr';
+import { cleanRosterName } from '@/lib/roster-name';
 import { createClient } from '@/lib/supabase/server';
 import { getViewer } from '@/lib/viewer';
 
@@ -44,7 +47,7 @@ export async function resolveRequest(formData: FormData) {
 }
 
 export async function addRoster(formData: FormData) {
-  const name = String(formData.get('display_name') ?? '').normalize('NFC').trim().slice(0, 40);
+  const name = cleanRosterName(formData.get('display_name'));
   const role = String(formData.get('role') ?? 'guest');
   const slot = String(formData.get('slot') ?? '') || null;
   const email = String(formData.get('email') ?? '').trim().toLowerCase() || null;
@@ -56,6 +59,16 @@ export async function addRoster(formData: FormData) {
     slot: slot && ['11', '15', '16', '17', 'online', 'family'].includes(slot) ? slot : null,
     email: email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null,
   });
+  refresh();
+}
+
+// 명단 이름 바꾸기. 그 사람이 별명을 따로 정하지 않았으면 걷기 화면·대화·쪽지 글쓴이에 이 이름이 보인다(whoami).
+export async function renameRoster(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  const name = cleanRosterName(formData.get('display_name'));
+  if (!UUID.test(id) || !name) return;
+  const supabase = await adminClient();
+  await supabase.from('roster').update({ display_name: name }).eq('id', id);
   refresh();
 }
 
@@ -97,5 +110,41 @@ export async function setDoor(formData: FormData) {
   if (!/^[a-z0-9-]{2,32}$/.test(slug) || !['open', 'resting', 'family', 'closed'].includes(door)) return;
   const supabase = await adminClient();
   await supabase.from('rooms').update({ door_state: door, accepts_records: accepts, updated_at: new Date().toISOString() }).eq('slug', slug);
+  refresh();
+}
+
+// ───────── 현장 QR 도장 표식(기획서 7.2). 코드는 여기서 만들고(헷갈리는 글자 없는 12자), 판정은 DB가 한다.
+export async function makeQr(formData: FormData) {
+  const slug = String(formData.get('room') ?? '');
+  const preset = String(formData.get('preset') ?? 'event');
+  const label = String(formData.get('label') ?? '').normalize('NFC').trim().slice(0, 40);
+  const room = ROOM_BY_SLUG.get(slug);
+  if (!room || room.door !== 'open') return;
+  const w = preset === 'test' ? testWindow(new Date()) : eventWindow(qrEventDay(process.env.QR_EVENT_DAY));
+  const supabase = await adminClient();
+  await supabase.rpc('admin_make_qr', {
+    p_room: slug,
+    p_code: normalizeCode(makeCode(3, 4)),
+    p_from: w.from.toISOString(),
+    p_until: w.until.toISOString(),
+    p_label: label || null,
+  });
+  refresh();
+}
+
+export async function revokeQr(formData: FormData) {
+  const id = String(formData.get('id') ?? '');
+  if (!UUID.test(id)) return;
+  const supabase = await adminClient();
+  await supabase.rpc('admin_revoke_qr', { p_id: id });
+  refresh();
+}
+
+// ───────── 조용 모드(공통 세션). 0이면 끈다. 켤 때 박수는 0부터.
+export async function setQuiet(formData: FormData) {
+  const minutes = Number(formData.get('minutes') ?? NaN);
+  if (![0, 10, 20, 30].includes(minutes)) return;
+  const supabase = await adminClient();
+  await supabase.rpc('admin_set_quiet', { p_minutes: minutes });
   refresh();
 }

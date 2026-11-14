@@ -74,7 +74,7 @@ const box = (g: THREE.Object3D, name?: string) => {
 };
 
 test('기본 인형: 모든 머리 모양 × 소품이 같은 비율(키·머리 크기), 얼굴 앞은 가리지 않고, 다 놓으면 남는 것이 없다', () => {
-  assert.deepEqual(A.avatarStats(), { kitRefs: 0, geometries: 0, materials: 0, labels: 0 });
+  assert.deepEqual(A.avatarStats(), { avatars: 0, geometries: 0, materials: 0, labels: 0 });
   const made: Array<ReturnType<typeof A.createAvatar>> = [];
   for (const hair of L.HAIR_STYLES) {
     for (const acc of L.ACCESSORIES) {
@@ -87,19 +87,51 @@ test('기본 인형: 모든 머리 모양 × 소품이 같은 비율(키·머리
       // 얼굴 가운데(눈 사이 앞)로 쏜 광선이 처음 맞는 것은 머리 덩어리, 그 점은 얼굴 구 앞면 근처(머리카락이 덮지 않음)
       const ray = new THREE.Raycaster(new THREE.Vector3(0, 0.85, 2), new THREE.Vector3(0, 0, -1));
       const hit = ray.intersectObject(a.group, true)[0];
-      assert.ok(hit && hit.object.name === 'head' && hit.point.z > 0.2 && hit.point.z < 0.3, `${hair}/${acc} 얼굴 ${hit?.point.z}`);
+      assert.ok(hit && hit.object.name === 'doll' && hit.point.z > 0.2 && hit.point.z < 0.3, `${hair}/${acc} 얼굴 ${hit?.point.z}`);
       let meshes = 0;
       a.group.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes++; });
       assert.ok(meshes <= 10, `${hair}/${acc} 메시 ${meshes}`);
     }
   }
-  // 같은 겉모습은 머리 기하를 함께 쓴다
+  // 같은 겉모습은 기하를 함께 쓴다
   const twin = A.createAvatar({ look: { kind: 'doll', doll: { ...DOLL, hair: 'curly', acc: 'bow' } } });
-  const head = (x: ReturnType<typeof A.createAvatar>) => (x.group.getObjectByName('head') as THREE.Mesh).geometry;
+  const head = (x: ReturnType<typeof A.createAvatar>) => (x.group.getObjectByName('doll') as THREE.Mesh).geometry;
   assert.equal(head(twin), head(made.find((m) => A.lookKey({ kind: 'doll', doll: { ...DOLL, hair: 'curly', acc: 'bow' } }) && m === made[3 * 6 + 3])!));
   twin.dispose();
   for (const a of made) a.dispose();
-  assert.deepEqual(A.avatarStats(), { kitRefs: 0, geometries: 0, materials: 0, labels: 0 });
+  assert.deepEqual(A.avatarStats(), { avatars: 0, geometries: 0, materials: 0, labels: 0 });
+});
+
+test('칭호: 제어·방향 글자를 빼고 공백을 하나로 TITLE_MAX자까지. 인형·사진 모두 달고, 빈 칭호는 키째 없다. 출입증·게임 서버·메시지 상한을 지난다', async () => {
+  assert.equal(L.cleanTitle('  오늘도   커피 한 잔  '), '오늘도 커피 한 잔');
+  assert.equal(L.cleanTitle('a\u202eb\u200bc\nd'), 'a b c d', '방향 바꾸기·보이지 않는 글자·줄바꿈');
+  assert.equal([...L.cleanTitle('가'.repeat(30))].length, L.TITLE_MAX);
+  assert.equal(A.LABEL_TITLE_MAX, L.TITLE_MAX, '이름표가 그리는 칭호 글자 수가 계약과 같다');
+  assert.equal([...L.cleanTitle('🙂'.repeat(30))].length, L.TITLE_MAX, '그림 글자도 한 글자로 센다');
+  assert.equal(L.cleanTitle(42), '');
+  const photo = { kind: 'photo' as const, url: '/api/avatar/0f8e2c1a-1234-4abc-9def-0123456789ab' };
+  assert.deepEqual(L.cleanLook({ ...photo, title: ' 집주인 ' }), { ...photo, title: '집주인' });
+  assert.deepEqual(L.cleanLook({ kind: 'doll', doll: DOLL, title: '산책 중' }), { kind: 'doll', doll: DOLL, title: '산책 중' });
+  assert.equal('title' in L.cleanLook({ ...photo, title: '   ' }), false, '빈 칭호는 키째 없다');
+  assert.equal('title' in L.cleanLook({ ...photo, title: 7 }), false);
+  assert.deepEqual(L.withTitle(L.cleanLook(photo), '새 칭호'), { ...photo, title: '새 칭호' });
+  assert.equal('title' in L.withTitle({ ...photo, title: '옛 칭호' }, ''), false, '빈 글이면 뗀다');
+  // 칭호를 모르는 화면이 고른 겉모습(칸이 없다)은 앞의 칭호를 잇고, 칸이 있으면 그것을 따른다
+  assert.equal(L.carryTitle({ kind: 'doll', doll: DOLL }, { title: '그대로' }).title, '그대로');
+  assert.equal(L.carryTitle(photo, null).title, undefined);
+  assert.equal('title' in L.carryTitle({ ...photo, title: '' }, { title: '그대로' }), false, '빈 칸이면 지운다');
+  // 이름표 열쇠는 칭호와 상관없다(칭호만 바꿔도 캐릭터를 새로 만들지 않는다)
+  assert.equal(A.lookKey({ ...photo, title: '아무거나' }), A.lookKey(photo));
+  // 가장 긴 칭호를 단 사진 겉모습도 출입증(겉모습 400자)과 게임 서버 검사를 그대로 지난다
+  const secret = 'test-secret-0123456789abcdef'; // gitleaks:allow (시험 전용 가짜 서명 키)
+  const long = { ...photo, title: '가'.repeat(L.TITLE_MAX) };
+  const exp = Math.floor(Date.now() / 1000) + 60;
+  const r = await token.verifyToken(site.signGameToken({ sub: 's1', name: '손님', color: '#3e6b4f', role: 'family', exp, look: long }, secret), secret);
+  assert.ok(r.ok);
+  if (r.ok) assert.deepEqual(protocol.cleanLook(r.payload.look), long);
+  // 걷기 화면이 보내는 겉모습 메시지(사진 증표 포함)도 한 메시지 상한 안
+  const msg = JSON.stringify({ t: 'k', look: long, p: `${exp}.${'A'.repeat(43)}` });
+  assert.ok(new TextEncoder().encode(msg).length < protocol.MAX_MESSAGE, `${new TextEncoder().encode(msg).length}바이트`);
 });
 
 test('lookKey: 같은 겉모습은 같은 열쇠, 하나라도 다르면 다른 열쇠, 겉모습이 없으면 색으로', () => {

@@ -33,6 +33,8 @@ export async function visionCheck(opts: {
   mime: string;
   instructions: string;
   schema: Record<string, unknown>;
+  /** 스키마에 붙이는 이름(기록에서 어떤 물음인지 가린다). 없으면 사진 살피기 */
+  schemaName?: string;
   safetyId?: string;
   timeoutMs?: number;
   baseUrl?: string;
@@ -53,7 +55,7 @@ export async function visionCheck(opts: {
         ],
       },
     ],
-    text: { format: { type: 'json_schema', name: 'photo_check', strict: true, schema: opts.schema } },
+    text: { format: { type: 'json_schema', name: opts.schemaName ?? 'photo_check', strict: true, schema: opts.schema } },
   };
   const res = await fetch(`${opts.baseUrl ?? API}/responses`, {
     method: 'POST',

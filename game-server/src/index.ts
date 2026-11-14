@@ -1,7 +1,7 @@
 // 조연당 함께 걷기 서버의 입구. 할 일은 문지기뿐이다:
 // Origin·공간 이름·출입증을 확인하고, 통과하면 그 공간의 Durable Object(Space)에 WebSocket을 넘긴다.
 // 나쁜 요청은 DO를 깨우지 않고 여기서 돌려보낸다(무료 요금제 요청 수 아끼기).
-import { PLAYER_HEADER } from './protocol';
+import { PLAYER_HEADER, SPACE_RE } from './protocol';
 import { verifyToken } from './token';
 import type { Space } from './space';
 
@@ -14,8 +14,6 @@ export type Env = {
   /** 쉼표 목록. 예: https://example.com,http://localhost:3331 */
   ALLOWED_ORIGINS?: string;
 };
-
-const SPACE_RE = /^(house:real|room:[a-z0-9-]{2,32})$/;
 
 function reply(status: number, text: string): Response {
   return new Response(text, { status, headers: { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' } });

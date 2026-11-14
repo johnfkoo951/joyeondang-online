@@ -2,8 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export const FADE_MS = 250;
-/** 새 장면이 끝내 안 뜨더라도 이만큼 지나면 암전을 걷는다 */
-const GIVE_UP_MS = 4000;
+/** 새 장면이 끝내 안 뜨더라도 이만큼 지나면 암전을 걷는다(장면은 첫 그림이 나와야 걷으라고 알리고,
+ *  셰이더 준비를 길게는 8초 기다리므로 그보다 조금 길게 잡는다) */
+const GIVE_UP_MS = 9000;
 
 /**
  * 짧은 암전. run(fn)은 화면을 0.25초 어둡게 한 뒤 fn을 부르고 다시 밝힌다.
@@ -15,12 +16,15 @@ export function useFade() {
   const busy = useRef(false);
   const waiting = useRef(false);
   const timers = useRef<number[]>([]);
+  /** 지금 전환의 포기 타이머. 걷을 때 지운다(앞 전환의 타이머가 다음 전환의 암전을 일찍 걷지 않게) */
+  const giveUp = useRef(0);
 
   useEffect(() => () => {
     timers.current.forEach((t) => window.clearTimeout(t));
   }, []);
 
   const show = useCallback(() => {
+    window.clearTimeout(giveUp.current);
     busy.current = false;
     waiting.current = false;
     requestAnimationFrame(() => requestAnimationFrame(() => setDark(false)));
@@ -43,7 +47,10 @@ export function useFade() {
       if (later) waiting.current = true;
       Promise.resolve().then(fn).catch(() => {}).finally(() => {
         if (!later) return show();
-        if (waiting.current) timers.current.push(window.setTimeout(() => { if (waiting.current) show(); }, GIVE_UP_MS));
+        if (waiting.current) {
+          giveUp.current = window.setTimeout(() => { if (waiting.current) show(); }, GIVE_UP_MS);
+          timers.current.push(giveUp.current);
+        }
       });
     }, FADE_MS));
   }, [show]);

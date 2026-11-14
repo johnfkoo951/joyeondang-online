@@ -1,4 +1,6 @@
 // 소리는 Web Audio로 그 자리에서 합성한다(음원 파일 없음). AudioContext는 첫 사용자 동작(play) 때 만든다.
+// iOS 무음 스위치와 상관없이 들리게 재생 세션으로 연다(../audio-session).
+import { openAudioContext } from '../audio-session';
 export type SoundKind = 'pick' | 'drawer' | 'good' | 'bad' | 'link' | 'step' | 'clear';
 
 /** 펜타토닉 위로(순서 칸 번호마다 한 음) */
@@ -18,13 +20,8 @@ export function createSound(initialMuted: boolean): Sound {
   function ensure(): AudioContext | null {
     if (muted) return null;
     if (!ctx) {
-      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AC) return null;
-      try {
-        ctx = new AC();
-      } catch {
-        return null;
-      }
+      ctx = openAudioContext();
+      if (!ctx) return null;
     }
     if (ctx.state === 'suspended') void ctx.resume();
     return ctx;

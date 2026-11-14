@@ -1,0 +1,8 @@
+/* 승인함 명단의 행사 태그(행사 초대 코드의 이름표)와 그 태그로 거르는 칩. 색은 사이트 토큰만 */
+.tagBar { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 지금 거른 칩은 칠한다(켜고 끄는 칩과 같은 모양) */
+.tagBar a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--paper); font-weight: 700; }
+/* 칩은 inline-flex라 글 사이 빈칸이 사라진다: 수 앞에 자리를 둔다 */
+.count { margin-left: 5px; font-variant-numeric: tabular-nums; font-weight: 700; opacity: 0.8; }
+/* 이름 옆의 태그: 뺀 표시·이름 바꾸기 단추와 떨어지게 */
+.tag { margin-left: 6px; background: var(--season-soft); color: var(--ink); font-weight: 700; white-space: nowrap; }

@@ -5,6 +5,9 @@ import type { Box, Furniture, FurnitureKind, HouseWorld } from './types';
 /** 그림만 남기고 충돌 상자를 없애는 장식 */
 export const DECOR: ReadonlySet<FurnitureKind> = new Set<FurnitureKind>([
   'floorLamp', 'hanjiLantern', 'cushion', 'pendant', 'hanjiPendant', 'rug', 'path', 'lattice', 'ridgeBeam', 'stairs',
+  // 걷기 손질(staging.ts)의 바닥·난간·무대 장식: 크기를 줄이면 이음매가 벌어진다
+  'aisle', 'glassRail', 'weddingStage', 'flowerArch', 'puppetStage', 'hyeonpan', 'pathLight', 'sconce', 'welcomeSign',
+  'pkmGallery', 'lectureWall', 'constellationMobile', 'tiguanPlanWall', 'blueprintWall', 'ledRibbonWall', 'garageTrackLight', 'garageBayLines',
 ]);
 /** 가구 바닥 면적 배율(가운데 기준). 그림과 충돌 상자에 똑같이 쓴다. */
 export const FURNITURE_AREA = 0.8;

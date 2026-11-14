@@ -1,0 +1,170 @@
+/* 걷기 화면의 대화창·접속자 목록·멘션 카드. 색은 사이트 토큰만(어두운 화면에서도 같이 바뀐다).
+   데스크탑: 오른쪽 세로 창(걸으면서 본다). 휴대폰: 아래에서 올라오는 창(자판이 열리면 그 위로). */
+.sheet {
+  position: absolute; z-index: 4; right: var(--walk-right);
+  top: calc(var(--walk-bar, calc(var(--walk-top) + 44px)) + 10px); bottom: var(--walk-bottom);
+  width: min(380px, calc(100% - var(--walk-left) - var(--walk-right)));
+  display: flex; flex-direction: column; overflow: hidden;
+  border-radius: 18px; background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.24); -webkit-user-select: text; user-select: text;
+}
+.sheet[data-coarse] {
+  left: var(--walk-left); width: auto; top: auto; height: min(74%, 600px);
+}
+@media (max-height: 520px) {
+  .sheet[data-coarse] { height: auto; top: calc(var(--walk-bar, calc(var(--walk-top) + 44px)) + 8px); }
+}
+
+.head {
+  flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 10px 8px 16px; border-bottom: 1px solid var(--line);
+}
+.title { margin: 0; font-size: 1.08rem; font-weight: 800; }
+.title:focus { outline: none; }
+.live { flex: 1; min-width: 0; font-size: 0.78rem; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live[data-on]::before {
+  content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--pine); vertical-align: 1px;
+}
+.headBtn {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; border-radius: 11px; cursor: pointer;
+  font: inherit; font-size: 0.86rem; font-weight: 700; color: var(--ink); background: var(--paper-2); border: 1px solid var(--line-2);
+}
+.head .title + .headBtn { margin-left: auto; }
+.x {
+  flex: none; display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 0; border-radius: 12px; cursor: pointer;
+  color: var(--ink); background: var(--paper-2); border: 1px solid var(--line-2);
+}
+.headBtn:hover, .x:hover { background: var(--paper-3); }
+.sheet[data-coarse] .x, .sheet[data-coarse] .headBtn { height: 44px; }
+.sheet[data-coarse] .x { width: 44px; }
+
+.list {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 6px 12px 10px; list-style: none;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.notice { margin: 6px 0; padding: 0; text-align: center; font-size: 0.84rem; color: var(--ink-2); list-style: none; }
+.olderRow { display: flex; justify-content: center; padding: 4px 0 6px; }
+.older {
+  padding: 4px 12px; min-height: 32px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 700;
+  color: var(--ink-2); background: var(--paper-2); border: 1px solid var(--line);
+}
+.older:disabled { opacity: 0.6; cursor: default; }
+.sheet[data-coarse] .older { min-height: 40px; }
+
+.msg {
+  position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: start;
+  padding: 6px 6px; border-radius: 12px;
+}
+.msg[data-to-me] { background: color-mix(in srgb, var(--season-soft) 70%, transparent); }
+.msg[data-lit] { outline: 2px solid var(--roof); outline-offset: -2px; }
+.msgMain { min-width: 0; }
+.msgHead { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; line-height: 1.35; }
+.name { font-weight: 800; font-size: 0.92rem; overflow-wrap: anywhere; }
+.msg[data-mine] .name { color: var(--roof); }
+.meta { font-size: 0.76rem; color: var(--ink-3); }
+.body { margin: 2px 0 0; font-size: 0.95rem; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.mention { font-weight: 800; }
+.mention[data-me] { color: var(--roof); }
+.del, .delYes {
+  align-self: center; padding: 2px 8px; min-height: 28px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.78rem; font-weight: 700;
+  color: var(--ink-2); background: transparent; border: 1px solid var(--line);
+}
+.delYes { color: var(--roof-on); background: var(--roof); border-color: var(--roof); }
+.delAsk { display: inline-flex; gap: 4px; align-self: center; }
+/* 마우스 화면에서는 「지우기」를 그 줄에 올렸을 때(또는 초점)만 보인다. 손가락 화면은 늘 보인다 */
+@media (hover: hover) and (pointer: fine) {
+  .msg .del { opacity: 0; }
+  .msg:hover .del, .msg:focus-within .del { opacity: 1; }
+}
+.sheet[data-coarse] .del, .sheet[data-coarse] .delYes { min-height: 36px; }
+
+.newPill {
+  position: absolute; left: 50%; bottom: 86px; transform: translateX(-50%); z-index: 1; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+  font: inherit; font-size: 0.84rem; font-weight: 800; color: var(--pine-on); background: var(--pine); border: 0; box-shadow: var(--walk-shadow);
+}
+
+.form {
+  position: relative; flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 8px;
+  padding: 8px 10px 10px; border-top: 1px solid var(--line); background: var(--paper);
+}
+.input {
+  min-width: 0; height: 42px; padding: 0 12px; border-radius: 11px; font: inherit; font-size: 1rem; color: var(--ink);
+  background: var(--paper-2); border: 1px solid var(--line-2); -webkit-user-select: text; user-select: text;
+}
+.input:disabled { opacity: 0.6; }
+.tip { grid-column: 1 / -1; margin: 0; padding: 0 4px; font-size: 0.78rem; color: var(--ink-2); }
+.tip:empty { display: none; }
+
+.picker {
+  position: absolute; left: 10px; right: 10px; bottom: calc(100% - 4px); z-index: 2; margin: 0; padding: 6px; list-style: none;
+  display: grid; gap: 2px; max-height: 240px; overflow-y: auto;
+  border-radius: 14px; background: var(--paper); border: 1px solid var(--line-2); box-shadow: 0 10px 28px rgb(0 0 0 / 0.22);
+}
+.pickItem, .pickOn {
+  width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px;
+  cursor: pointer; font: inherit; text-align: left; color: var(--ink); background: transparent; border: 0;
+}
+.pickItem:hover { background: var(--paper-2); }
+.pickOn { background: var(--paper-3); }
+.pickName { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pickWhere { font-size: 0.76rem; color: var(--ink-3); }
+.pickEmpty { padding: 6px 8px; font-size: 0.84rem; color: var(--ink-2); }
+
+.people { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.person { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 4px; }
+.person[data-me] { padding-bottom: 10px; border-bottom: 1px dashed var(--line); margin-bottom: 4px; }
+.personMain { min-width: 0; display: grid; }
+.personMain .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group { margin-top: 8px; }
+.groupTitle { margin: 4px 0 2px; font-size: 0.82rem; font-weight: 800; color: var(--ink-2); }
+.groupN { font-weight: 700; color: var(--ink-3); }
+.mentionBtn {
+  padding: 4px 10px; min-height: 32px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.82rem; font-weight: 800;
+  color: var(--roof); background: var(--paper); border: 1px solid var(--line-2);
+}
+.mentionBtn:hover { background: var(--paper-2); }
+.sheet[data-coarse] .mentionBtn { min-height: 40px; }
+
+.thumb {
+  position: relative; flex: none; display: inline-grid; place-items: center; overflow: hidden; border-radius: 50%;
+  background: var(--season-soft, var(--paper-3)); border: 1px solid var(--walk-edge, var(--line));
+}
+/* 작은 방향 그림 묶음(다섯 칸, 칸마다 가로:세로 2:3)의 첫 칸 얼굴 쪽, 그림 한 장(2:3)의 얼굴 쪽을 동그라미에 맞춘다 */
+.thumbSheet, .thumbOne { position: absolute; left: -19.4%; top: -5.6%; max-width: none; height: auto; }
+.thumbSheet { width: 694.4%; }
+.thumbOne { width: 138.9%; }
+.thumbText { color: #fff; font-weight: 800; line-height: 1; }
+/* 받는 동안은 그림을 숨겨 둔다(반쯤 그려진 그림이 첫 글자 위에 겹치지 않게) */
+.thumbText > img { opacity: 0; }
+
+.cards {
+  position: absolute; z-index: 5; left: 50%; transform: translateX(-50%);
+  top: calc(var(--walk-bar, calc(var(--walk-top) + 44px)) + 10px);
+  width: min(440px, calc(100% - var(--walk-left) - var(--walk-right))); display: grid; gap: 8px; pointer-events: none;
+}
+.card {
+  pointer-events: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start;
+  border-radius: 16px; background: var(--paper); border: 1px solid var(--line-2); box-shadow: 0 12px 30px rgb(0 0 0 / 0.24);
+  animation: card-in 0.22s ease-out;
+}
+.cardMain {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; padding: 10px 6px 10px 12px;
+  cursor: pointer; font: inherit; text-align: left; color: var(--ink); background: transparent; border: 0; border-radius: 16px;
+}
+.cardText { min-width: 0; display: grid; gap: 2px; }
+.cardWho { font-size: 0.82rem; color: var(--ink-2); }
+.cardWho b { color: var(--ink); font-weight: 800; }
+.cardBody { font-size: 0.95rem; font-weight: 700; overflow-wrap: anywhere; }
+.cardX {
+  margin: 6px 6px 0 0; display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; cursor: pointer;
+  color: var(--ink-2); background: transparent; border: 0;
+}
+.cardX:hover { background: var(--paper-2); }
+@keyframes card-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+}
+
+.older:focus-visible, .headBtn:focus-visible, .x:focus-visible, .del:focus-visible, .delYes:focus-visible, .mentionBtn:focus-visible,
+.pickItem:focus-visible, .pickOn:focus-visible, .cardMain:focus-visible, .cardX:focus-visible, .newPill:focus-visible, .input:focus-visible {
+  outline: 3px solid var(--focus); outline-offset: 2px;
+}

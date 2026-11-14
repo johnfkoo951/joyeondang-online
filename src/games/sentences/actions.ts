@@ -1,9 +1,11 @@
 'use server';
 // 문장 걸어 두기의 서버 액션. 방 화면의 submitNote(src/app/actions.ts)와 같은 틀이다.
-// 입력 검사·속도 제한·작성자·공개 범위의 최종 판단은 DB(records_guard_insert, RLS)가 한 번 더 한다.
+// 입력 검사·작성자·공개 범위의 최종 판단은 DB(records_guard_insert, RLS)가 한 번 더 한다.
+// 한 사람이 넣는 장수 한도는 DB에 0014_guards.sql이 올라간 뒤부터 걸린다(그 전에는 한도가 없다).
 import { canUse } from '@/lib/access';
 import { makeCode } from '@/lib/code';
 import { supabaseReady } from '@/lib/env';
+import { recordLimitMessage } from '@/lib/record-errors';
 import { createClient } from '@/lib/supabase/server';
 import { checkBody, contactWarnings } from '@/lib/text';
 import { getViewer } from '@/lib/viewer';
@@ -64,11 +66,11 @@ export async function hangSentence(input: HangInput): Promise<HangState> {
     .single();
   if (error || !data) {
     const m = error?.message ?? '';
-    const message = /room_closed/.test(m)
+    const message = recordLimitMessage(m) ?? (/room_closed/.test(m)
       ? '이 방은 지금 쉬는 중이에요.'
       : /not_on_roster/.test(m)
         ? '손님 로그인 뒤 걸 수 있어요.'
-        : '걸지 못했어요. 잠시 뒤 다시 눌러 주세요.';
+        : '걸지 못했어요. 잠시 뒤 다시 눌러 주세요.');
     return { ok: false, message };
   }
   const receipt = makeCode(3, 4);

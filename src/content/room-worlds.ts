@@ -1,8 +1,5 @@
 // 문으로 들어가는 방 장면 일곱. 집과 따로 지은 작은 세계라 걷기 엔진이 같은 모양(HouseWorld, kind 'room')으로 그린다.
-// 공개 묶음에 들어가므로 실명·장소 이름·실제 치수는 없다. 방 크기는 놀기 좋게 정한 약 5×6m.
-// 좌표: 방 가운데가 (0, 0), 문 하나·창 하나 이상, 바닥 y=0(1층만). 앞쪽 방향 = (-sin yaw, -cos yaw).
-// 가구 자리는 걷기 엔진의 손질(tuneWorld: 장식이 아닌 가구를 한 변 √0.8배로 줄임) 뒤의 크기로 적고,
-// 저장할 때 그만큼 미리 키워 둔다. 그래서 벽을 따라 붙인 책장·벽지·줄이 손질 뒤에 벽 끝까지 꼭 맞는다.
+// 공개 묶음에 들어가므로 실명·장소 이름·실제 치수는 없다. 각 방은 주인의 세계관에 맞춘 크기와 창밖 전망을 갖는다.
 import type {
   Box, CeilingSpec, DoorSpec, FloorMat, Furniture, FurnitureKind, Hotspot, HouseWorld, WallSpec, WindowSpec,
 } from '@/walk/types';
@@ -12,24 +9,38 @@ export const ROOM_SCENES: string[] = ['gable', 'toybox', 'target', 'mind', 'stud
 
 /**
  * 방마다 놀이(id·이름·한 줄). src/games/registry.ts의 gamesInRoom()과 같아야 한다(시험이 맞춰 본다).
- * registry를 직접 부르지 않는 까닭: 이 파일은 node 시험에서도 그대로 돌아야 해서 값 가져오기를 두지 않는다.
  */
 export const ROOM_GAMES: Record<string, Array<{ id: string; title: string; blurb: string }>> = {
-  gable: [{ id: 'jam', title: '박공 아래 잼', blurb: '네 박자를 듣고 그대로 받아 쳐요. 세 판을 넘기면 두 마디를 오늘의 곡에 이어 붙여요.' }],
-  toybox: [{ id: 'shelf', title: '좋아하는 것 선반', blurb: '선반에 좋아하는 것들을 골라 올려 나만의 선반을 꾸며요.' }],
+  gable: [
+    {
+      id: 'jam',
+      title: '박공 아래 잼',
+      blurb: '네 박자를 듣고 그대로 받아 쳐요. 세 판을 넘기면 두 마디를 오늘의 곡에 이어 붙여요.',
+    },
+    {
+      id: 'groove',
+      title: '리듬 천국 재즈 스튜디오',
+      blurb: '트리오 박수·비밥 브라스 콜·5/4 변박 클라베·올스타 리믹스까지, 스윙 포켓을 귀로 짚어 내는 리듬 게임이에요.',
+    },
+    {
+      id: 'pitch',
+      title: '재즈 이어 트레이닝 · 음정과 화성',
+      blurb: '상대음감 음정 찾기부터 Maj9·7alt 텐션 보이싱 구별, 3음 비밥 릭 받아적기까지 건반으로 도전해요.',
+    },
+  ],
+  toybox: [
+    { id: 'sword', title: '소드 콘티넌트', blurb: '4대 왕국 18스테이지를 돌파하며 사탕으로 레벨업하고 10대 스킨과 보스 레이드, 2인 협동을 즐기는 3D 액션 RPG예요.' },
+    { id: 'shelf', title: '좋아하는 것 선반', blurb: '선반에 좋아하는 것들을 골라 올려 나만의 선반을 꾸며요.' },
+  ],
   target: [{ id: 'target', title: '종이공 과녁', blurb: '종이공을 던져 떠오르는 과녁을 맞혀요. 60초 동안 몇 개나 맞힐까요?' }],
   mind: [{ id: 'brain', title: '생각 지도 퀴즈', blurb: '낱말을 알맞은 지식 서랍에 넣고, 생각이 자라는 순서를 맞혀요.' }],
-  study: [{ id: 'sentences', title: '문장 걸어 두기', blurb: '요즘 만난 좋은 문장 하나를 출처와 함께 옮겨 적어 벽에 걸어요. 걸린 문장도 한 장씩 읽어요.' }],
-  // 손님방·작업 차고는 놀이 없이 둘러보는 방
+  study: [{ id: 'poetry', title: '문장의 주인을 찾아라', blurb: '시 구절을 읽고 네 개의 낙관 중 시인을 골라요. 여섯 문장 뒤에 오늘의 문장을 만나요.' }, { id: 'calligraphy', title: '글씨의 주인을 찾아라', blurb: '서안 위 체본을 따라 恒常心을 쓰고 나만의 낙관을 찍어요.' }, { id: 'sentences', title: '문장 걸어 두기', blurb: '요즘 만난 좋은 문장 하나를 출처와 함께 옮겨 적어 벽에 걸어요. 걸린 문장도 한 장씩 읽어요.' }],
   guest: [],
   garage: [],
 };
 
 export type ToyShape = 'dino' | 'car' | 'train' | 'blocks' | 'robot' | 'ball' | 'star' | 'book' | 'crayons' | 'drum' | 'boat' | 'bear';
-/**
- * 아이 취향 선반에 올리는 소품(좋아하는 것 방·과녁 방의 선반과 장난감 상자). 취향이 바뀌면 이 배열만 고친다.
- * shape는 furnish.ts가 아는 모양 열둘 가운데 하나, color는 주된 색. 선반마다 이 목록을 다른 자리에서부터 차례로 올린다.
- */
+
 export const TOY_SHELF: Array<{ name: string; shape: ToyShape; color: string }> = [
   { name: '초록 공룡', shape: 'dino', color: '#5fb85a' },
   { name: '빨간 자동차', shape: 'car', color: '#e2553f' },
@@ -47,40 +58,48 @@ export const TOY_SHELF: Array<{ name: string; shape: ToyShape; color: string }> 
   { name: '노란 버스', shape: 'car', color: '#f5c518' },
 ];
 
-// ───────── 방 껍데기: 벽 넷, 문 하나, 창, 천장
 const WALL_T = 0.2;
-/** 걷기 엔진 손질 배율(src/walk/tune.ts FURNITURE_SIDE, 시험이 맞춰 본다) */
 const TUNE_SIDE = Math.sqrt(0.8);
 /** 손질에서 크기를 바꾸지 않는 가구(tune.ts DECOR와 소나무) */
 const TUNE_KEEPS: ReadonlySet<FurnitureKind> = new Set<FurnitureKind>([
   'floorLamp', 'hanjiLantern', 'cushion', 'pendant', 'hanjiPendant', 'rug', 'path', 'lattice', 'ridgeBeam', 'stairs', 'pine',
+  'aisle', 'glassRail', 'weddingStage', 'flowerArch', 'puppetStage', 'hyeonpan', 'pathLight', 'sconce', 'welcomeSign',
+  'pkmGallery', 'lectureWall', 'constellationMobile', 'tiguanPlanWall', 'blueprintWall', 'ledRibbonWall', 'garageTrackLight', 'garageBayLines',
 ]);
 
 type WallSide = '-z' | '+z' | '-x' | '+x';
 type Spot = { x: number; z: number; r: number };
+type ExtraHotspot = {
+  id: string;
+  x: number;
+  z: number;
+  r: number;
+  aimY?: number;
+  title: string;
+  line: string;
+  kind: 'exhibit' | 'board';
+  exhibit?: string;
+  boardRoom?: string;
+};
+
 type RoomSpec = {
   slug: string;
   name: string;
-  /** 벽 가운데 선 사이 너비(x)와 깊이(z), 벽 높이, 천장 높이 */
   w: number; d: number; h: number; ceiling: number;
   floor: FloorMat;
-  /** 문: 어느 벽, 벽을 따라간 가운데 자리, 너비, 높이 */
   door: { wall: WallSide; at: number; width: number; top: number };
   windows: Array<{ wall: WallSide; from: number; to: number; sill: number; top: number }>;
   spawn: { x: number; z: number; yaw: number };
   exit: Spot;
-  /** ROOM_GAMES 차례대로 놀이 자리 */
   games: Spot[];
-  /** 손질 뒤 크기로 적은 가구 */
+  extras?: ExtraHotspot[];
   furniture: Furniture[];
 };
 
-/** 가구 한 줄: 종류, x1·x2·z1·z2, 정면, 충돌 */
 function f(kind: FurnitureKind, x1: number, x2: number, z1: number, z2: number, face?: Furniture['face'], collide = false): Furniture {
   return face ? { kind, level: 1, x1, x2, z1, z2, face, collide } : { kind, level: 1, x1, x2, z1, z2, collide };
 }
 
-/** 걷기 엔진이 줄일 몫만큼 미리 키운다(가운데 기준). 줄이지 않는 장식은 그대로. */
 function pre(item: Furniture): Furniture {
   if (TUNE_KEEPS.has(item.kind)) return item;
   const cx = (item.x1 + item.x2) / 2, cz = (item.z1 + item.z2) / 2;
@@ -90,7 +109,6 @@ function pre(item: Furniture): Furniture {
 
 const axisOf = (wall: WallSide): 'x' | 'z' => (wall === '-z' || wall === '+z' ? 'x' : 'z');
 
-/** 벽 하나의 선 좌표와 벽을 따라간 구간 */
 function wallLine(spec: RoomSpec, wall: WallSide): { at: number; from: number; to: number } {
   const hw = spec.w / 2, hd = spec.d / 2;
   if (wall === '-z') return { at: -hd, from: -hw - WALL_T / 2, to: hw + WALL_T / 2 };
@@ -134,9 +152,22 @@ function buildRoom(spec: RoomSpec): HouseWorld {
   const furniture = spec.furniture.map(pre);
   const games = ROOM_GAMES[spec.slug] ?? [];
   const hotspots: Hotspot[] = [
-    { id: 'exit', level: 1, ...spec.exit, title: '나가는 문', line: '나가면 들어온 문 앞으로 돌아가요.', kind: 'exit' },
+    { id: 'exit', level: 1, ...spec.exit, aimY: 1.2, title: '나가는 문', line: '나가면 들어온 문 앞으로 돌아가요.', kind: 'exit' },
     ...games.map((g, i): Hotspot => ({
-      id: `game-${g.id}`, level: 1, ...spec.games[i], title: g.title, line: g.blurb, kind: 'game', game: g.id,
+      id: `game-${g.id}`, level: 1, ...spec.games[i], aimY: 1.1, title: g.title, line: g.blurb, kind: 'game', game: g.id,
+    })),
+    ...(spec.extras ?? []).map((ex): Hotspot => ({
+      id: ex.id,
+      level: 1,
+      x: ex.x,
+      z: ex.z,
+      r: ex.r,
+      aimY: ex.aimY ?? 1.25,
+      title: ex.title,
+      line: ex.line,
+      kind: ex.kind,
+      exhibit: ex.exhibit,
+      boardRoom: ex.boardRoom,
     })),
   ];
   const boxes: Box[] = [
@@ -160,190 +191,375 @@ function buildRoom(spec: RoomSpec): HouseWorld {
   };
 }
 
-// ───────── 방 일곱. 가구 줄: f(종류, x1, x2, z1, z2, 정면, 충돌)
+// ───────── 1. 재즈가 흐르는 방 (스윙 잼 · 리듬 천국 스튜디오 · 재즈 이어 트레이닝 · 리더보드)
 const GABLE: RoomSpec = {
-  slug: 'gable', name: '재즈가 흐르는 방', w: 5, d: 6, h: 2.9, ceiling: 2.89, floor: 'oak',
-  // 재즈만 두는 방. 용마루가 앞뒤로 지나고 양옆으로 천장이 내려온다. 박공 끝벽에 키 큰 창, 옆벽에 낮은 창.
-  door: { wall: '+z', at: 0, width: 1.0, top: 2.1 },
+  slug: 'gable', name: '재즈가 흐르는 방', w: 6.8, d: 7.6, h: 3.1, ceiling: 3.09, floor: 'oak',
+  door: { wall: '+z', at: 0, width: 1.05, top: 2.15 },
   windows: [
-    { wall: '-z', from: -0.7, to: 0.7, sill: 0.8, top: 2.55 },
-    { wall: '+x', from: -0.6, to: 0.6, sill: 0.95, top: 1.6 },
+    { wall: '-z', from: -1.45, to: 1.45, sill: 0.72, top: 2.68 },
+    { wall: '+x', from: -1.35, to: 1.05, sill: 0.88, top: 2.22 },
   ],
-  spawn: { x: 0, z: 1.5, yaw: 0 },
-  exit: { x: 0, z: 2.4, r: 0.8 },
-  games: [{ x: -0.8, z: 0.1, r: 1.1 }],
+  spawn: { x: 0, z: 2.25, yaw: 0 },
+  exit: { x: 0, z: 3.25, r: 0.75 },
+  games: [
+    { x: -1.85, z: -1.85, r: 0.95 }, // 박공 아래 잼(피아노·베이스 옆)
+    { x: 0.0, z: -0.65, r: 0.95 },   // 리듬 천국 재즈 스튜디오(중앙 패드 스테이션)
+    { x: 1.85, z: -1.85, r: 0.95 },  // 재즈 이어 트레이닝(로즈 건반 책상)
+  ],
+  extras: [
+    {
+      id: 'exhibit-gable-vinyl',
+      x: -2.45, z: 0.55, r: 0.9, aimY: 1.35,
+      title: '재즈 레코드 & 무대 리본 노트',
+      line: '2주간 변박을 반복해 익힌 사연과 공연 무대 빛의 리본 연출 노트를 펼쳐 봅니다.',
+      kind: 'exhibit',
+      exhibit: 'gable-vinyl',
+    },
+    {
+      id: 'board-gable',
+      x: 2.35, z: 2.15, r: 0.85, aimY: 1.25,
+      title: '재즈 스튜디오 리더보드',
+      line: '박공 아래 잼 · 리듬 천국 · 이어 트레이닝 세 놀이의 실시간 최고 순위표예요.',
+      kind: 'board',
+      boardRoom: 'gable',
+    },
+  ],
   furniture: [
-    f('slopedCeiling', -2.4, 2.4, -2.9, 2.9),
-    // 재즈 쪽: 레코드장과 턴테이블, 업라이트 피아노와 의자, 작은 무대 러그, 보면대, 벽에 기대 둔 콘트라베이스
-    f('recordShelf', -2.4, -2.0, -1.7, -0.1, '+x', true),
-    f('piano', -2.3, -0.95, -2.9, -2.32, '+z', true),
-    f('bench', -1.95, -1.3, -2.15, -1.82, undefined, true),
-    f('roundRug', -1.85, -0.25, -1.2, 0.4),
-    f('musicStand', -1.15, -0.75, -0.8, -0.5, '+z'),
-    f('doubleBass', -1.55, -0.95, 2.45, 2.9, '-z', true),
-    f('armchair', -2.35, -1.55, 0.9, 1.75, '+x', true),
-    f('floorLamp', -2.3, -1.95, 0.25, 0.6),
-    f('wallFrames', -2.2, -1.05, -2.9, -2.86, '+z'),
-    // 듣는 자리: 낮은 창 아래 소파와 찻상, 턴테이블을 올린 레코드 장, 스탠드, 액자
-    f('sofa', 1.65, 2.4, -1.1, 1.1, '-x', true),
-    f('coffeeTable', 0.75, 1.35, -0.55, 0.55, undefined, true),
-    f('recordCabinet', 2.0, 2.4, -2.6, -1.5, '-x', true),
-    f('floorLamp', 2.0, 2.35, 1.4, 1.75),
-    f('wallFrames', 0.9, 2.0, 2.86, 2.9, '-z'),
-    f('plant', 1.0, 1.4, -2.85, -2.45, undefined, true),
-    f('pendant', -0.2, 0.2, -0.6, -0.2),
+    f('slopedCeiling', -3.3, 3.3, -3.7, 3.7),
+    f('ledRibbonWall', -3.3, -3.26, -3.1, -1.3, '+x'),
+    f('recordShelf', -3.3, -2.85, -0.5, 1.5, '+x', true),
+    f('piano', -3.05, -1.65, -3.7, -3.1, '+z', true),
+    f('bench', -2.65, -2.0, -2.92, -2.58, undefined, true),
+    f('doubleBass', -3.25, -2.65, 2.2, 2.85, '+x', true),
+    f('musicStand', -1.55, -1.15, -2.55, -2.25, '+z'),
+    f('roundRug', -1.35, 1.35, -1.75, 0.55),
+    f('grooveStation', -0.45, 0.45, -1.45, -0.88, '+z', true),
+    f('earTrainerDesk', 1.55, 2.85, -3.68, -3.08, '+z', true),
+    f('sofa', 2.45, 3.28, -0.95, 1.15, '-x', true),
+    f('coffeeTable', 1.55, 2.1, -0.45, 0.55, undefined, true),
+    f('recordCabinet', 2.8, 3.28, -2.55, -1.45, '-x', true),
+    f('leaderboardStand', 2.65, 3.2, 2.25, 2.75, '-x', true),
+    f('armchair', -3.25, -2.45, 2.95, 3.65, '+x', true),
+    f('floorLamp', -3.2, -2.85, 1.75, 2.1),
+    f('plant', 2.8, 3.22, 3.05, 3.5, undefined, true),
+    f('pendant', -0.2, 0.2, -0.4, 0.0),
   ],
 };
 
+// ───────── 2. 좋아하는 것 방 (조개와 조약돌 채집함 · 상상 스케치 · 선반 놀이 · 리더보드)
 const TOYBOX: RoomSpec = {
-  slug: 'toybox', name: '좋아하는 것 방', w: 5, d: 6, h: 2.6, ceiling: 2.59, floor: 'oak',
-  // 아이 취향 방: 밝은 퍼즐 매트, 낮은 상자 선반 둘, 장난감 상자, 블록 탑, 구석의 작은 텐트, 창 아래 낮은 그림 책상
-  door: { wall: '+z', at: 1.3, width: 1.0, top: 2.1 },
+  slug: 'toybox', name: '좋아하는 것 방', w: 6.0, d: 6.8, h: 2.75, ceiling: 2.74, floor: 'oak',
+  door: { wall: '+z', at: 1.35, width: 1.0, top: 2.1 },
   windows: [
-    { wall: '-z', from: -0.8, to: 0.6, sill: 0.75, top: 2.1 },
-    { wall: '-x', from: -0.5, to: 0.7, sill: 0.85, top: 1.9 },
+    { wall: '-z', from: -1.55, to: 1.15, sill: 0.68, top: 2.22 },
+    { wall: '-x', from: -0.95, to: 1.05, sill: 0.82, top: 2.02 },
   ],
-  spawn: { x: 1.3, z: 1.5, yaw: 0 },
-  exit: { x: 1.3, z: 2.4, r: 0.8 },
-  games: [{ x: 1.3, z: -1.5, r: 1.0 }],
+  spawn: { x: 1.35, z: 1.85, yaw: 0 },
+  exit: { x: 1.35, z: 2.85, r: 0.75 },
+  games: [
+    { x: -1.55, z: -0.25, r: 0.95 }, // 소드 콘티넌트 3D 대검 아케이드 포털
+    { x: 1.65, z: -1.75, r: 0.95 },  // 좋아하는 것 선반
+  ],
+  extras: [
+    {
+      id: 'exhibit-toybox-treasure',
+      x: -0.55, z: -1.95, r: 0.9, aimY: 0.85,
+      title: '바닷가 조개 & 예쁜 돌 보물상자',
+      line: '지나치지 않고 모아 온 조개껍데기와 색색의 산길 조약돌, 엉뚱한 상상 스케치북이에요.',
+      kind: 'exhibit',
+      exhibit: 'toybox-treasure',
+    },
+    {
+      id: 'board-toybox',
+      x: -1.95, z: 2.05, r: 0.85, aimY: 1.2,
+      title: '좋아하는 것 방 리더보드',
+      line: '소드 콘티넌트와 선반 꾸미기 놀이의 실시간 최고 기록을 함께 확인해요.',
+      kind: 'board',
+      boardRoom: 'toybox',
+    },
+  ],
   furniture: [
-    f('stripeWall', 2.38, 2.4, -2.88, 2.88, '-x'),
-    f('playMat', -1.1, 1.1, -1.4, 0.9),
-    f('toyShelf', 0.85, 2.35, -2.9, -2.55, '+z', true),
-    f('toyShelf', 2.05, 2.4, -2.2, -0.7, '-x', true),
-    f('playTent', -2.35, -1.25, -2.85, -1.75, '+z', true),
-    f('blockTower', -0.75, -0.3, -0.95, -0.5, undefined, true),
-    f('toyChest', -2.4, -1.85, 1.0, 2.0, '+x', true),
-    f('kidDesk', -2.35, -1.45, -0.6, 0.6, '+x', true),
-    f('bunting', -2.38, 2.38, -0.42, -0.38),
+    f('stripeWall', 2.88, 2.9, -3.28, 3.28, '-x'),
+    f('playMat', -1.15, 1.25, -1.35, 1.05),
+    f('toyShelf', 1.25, 2.82, -3.3, -2.92, '+z', true),
+    f('toyShelf', 2.52, 2.88, -2.4, -0.8, '-x', true),
+    f('treasureTable', -1.15, 0.15, -3.22, -2.62, '+z', true),
+    f('playTent', -2.85, -1.75, -3.25, -2.15, '+z', true),
+    f('swordArcade', -2.85, -1.92, -0.75, 0.15, '+x', true),
+    f('blockTower', -0.55, -0.15, -0.85, -0.45, undefined, true),
+    f('toyChest', -2.88, -2.32, 0.85, 1.8, '+x', true),
+    f('kidDesk', 2.15, 2.85, 0.35, 1.25, '-x', true),
+    f('leaderboardStand', -2.82, -2.28, 2.15, 2.68, '+x', true),
+    f('bunting', -2.88, 2.88, -0.42, -0.38),
     f('globeLantern', -0.2, 0.2, -0.2, 0.2),
-    f('globeLantern', 1.1, 1.5, -1.9, -1.5),
-    f('wallFrames', -2.1, 0.5, 2.86, 2.9, '-z'),
-    f('plant', 1.95, 2.35, 2.3, 2.7, undefined, true),
+    f('globeLantern', 1.3, 1.7, -2.1, -1.7),
+    f('plant', 2.35, 2.8, 2.55, 3.0, undefined, true),
   ],
 };
 
+// ───────── 3. 종이공 과녁 방 (만능 도전자 책상 · 바위산 전망 · 과녁 놀이 · 리더보드)
 const TARGET: RoomSpec = {
-  slug: 'target', name: '종이공 과녁 방', w: 5, d: 6, h: 2.6, ceiling: 2.59, floor: 'oak',
+  slug: 'target', name: '종이공 과녁 방', w: 6.0, d: 6.8, h: 2.75, ceiling: 2.74, floor: 'oak',
   door: { wall: '+z', at: 0, width: 1.0, top: 2.1 },
-  windows: [{ wall: '+x', from: -1.2, to: 0.4, sill: 0.85, top: 2.15 }],
-  spawn: { x: 0, z: 1.5, yaw: 0 },
-  exit: { x: 0, z: 2.4, r: 0.8 },
-  games: [{ x: 0, z: 0.4, r: 1.0 }],
+  windows: [
+    { wall: '+x', from: -1.75, to: 1.15, sill: 0.72, top: 2.28 },
+  ],
+  spawn: { x: 0, z: 1.85, yaw: 0 },
+  exit: { x: 0, z: 2.85, r: 0.75 },
+  games: [{ x: 0, z: 0.25, r: 0.95 }],
+  extras: [
+    {
+      id: 'exhibit-target-summit',
+      x: -1.85, z: -1.45, r: 0.9, aimY: 1.0,
+      title: '만능 도전자 책상 & 첫 노트',
+      line: '수학 퍼즐과 스포츠 공, 스스로 정리하는 첫 볼트 기록장이 놓인 책상이에요.',
+      kind: 'exhibit',
+      exhibit: 'target-summit',
+    },
+    {
+      id: 'board-target',
+      x: 1.95, z: 2.05, r: 0.85, aimY: 1.25,
+      title: '종이공 과녁 리더보드',
+      line: '60초 동안 누가 가장 높은 점수를 맞혔는지 순위를 겨뤄 보세요!',
+      kind: 'board',
+      boardRoom: 'target',
+    },
+  ],
   furniture: [
-    // 밝은 줄무늬 벽지(창 낸 벽은 회벽 그대로), 맞은편 벽에 과녁판 셋
-    f('stripeWall', -2.4, 2.4, -2.9, -2.88, '+z'),
-    f('stripeWall', -2.4, -2.38, -2.88, 2.88, '+x'),
-    f('stripeWall', -2.38, -0.6, 2.88, 2.9, '-z'),
-    f('stripeWall', 0.6, 2.4, 2.88, 2.9, '-z'),
-    f('targets', -2.1, 2.1, -2.88, -2.8, '+z'),
-    f('playMat', -1.3, 1.3, -0.4, 1.6),
-    f('paperBasket', 1.45, 1.95, 0.95, 1.45, undefined, true),
-    f('kidDesk', -2.35, -1.45, -1.7, -0.5, '+x', true),
-    f('toyShelf', -2.38, -2.03, 0.5, 1.9, '+x', true),
-    f('bunting', -2.38, 2.38, -1.32, -1.28),
-    f('bunting', -2.38, 2.38, 0.88, 0.92),
+    f('stripeWall', -2.9, 2.9, -3.3, -3.28, '+z'),
+    f('stripeWall', -2.9, -2.88, -3.28, 3.28, '+x'),
+    f('targets', -2.2, 2.2, -3.28, -3.2, '+z'),
+    f('playMat', -1.45, 1.45, -0.65, 1.45),
+    f('paperBasket', 1.65, 2.15, 0.75, 1.25, undefined, true),
+    f('trophyDesk', -2.85, -1.95, -2.15, -0.85, '+x', true),
+    f('toyShelf', -2.88, -2.45, 0.35, 1.85, '+x', true),
+    f('leaderboardStand', 2.32, 2.85, 2.1, 2.65, '-x', true),
+    f('bunting', -2.88, 2.88, -1.42, -1.38),
     f('globeLantern', -0.25, 0.25, 0.35, 0.85),
-    f('globeLantern', -1.7, -1.3, -1.0, -0.6),
-    f('plant', 1.85, 2.3, -2.75, -2.3, undefined, true),
-    f('wallFrames', 2.36, 2.4, 0.8, 2.1, '-x'),
+    f('plant', 2.3, 2.78, -3.15, -2.65, undefined, true),
   ],
 };
 
+// ───────── 4. 생각 지도 방 (구요한의 방: PKM 일러스트 갤러리 · 지산 책상 · 강의 자산 보드 · 생각 퀴즈 · 리더보드)
 const MIND: RoomSpec = {
-  slug: 'mind', name: '생각 지도 방', w: 5, d: 6, h: 2.6, ceiling: 2.59, floor: 'oak',
-  door: { wall: '+z', at: 1.0, width: 1.0, top: 2.1 },
-  windows: [{ wall: '-z', from: -0.6, to: 0.6, sill: 0.9, top: 2.15 }],
-  spawn: { x: 1.0, z: 1.5, yaw: 0 },
-  exit: { x: 1.0, z: 2.4, r: 0.8 },
-  games: [{ x: 1.35, z: -0.7, r: 1.1 }],
+  slug: 'mind', name: '생각 지도 방', w: 7.8, d: 8.6, h: 3.0, ceiling: 2.99, floor: 'blackwood',
+  door: { wall: '+z', at: 0, width: 1.08, top: 2.15 },
+  windows: [
+    { wall: '-z', from: -2.15, to: 2.15, sill: 0.65, top: 2.55 },
+    { wall: '-x', from: -1.45, to: 1.45, sill: 0.85, top: 2.35 },
+  ],
+  spawn: { x: 0, z: 2.75, yaw: 0 },
+  exit: { x: 0, z: 3.75, r: 0.75 },
+  games: [{ x: 2.45, z: 1.45, r: 1.0 }],
+  extras: [
+    {
+      id: 'exhibit-mind-jisan',
+      x: 0, z: -2.25, r: 1.05, aimY: 1.15,
+      title: '지산(紙散) 에세이 & 개념 책상',
+      line: '에이전트 하네스 7층, 루만의 소통이론, Schema는 Harness다, 나만의 확률값 등 지산 블로그 핵심 글을 읽어요.',
+      kind: 'exhibit',
+      exhibit: 'mind-jisan',
+    },
+    {
+      id: 'exhibit-mind-lectures',
+      x: 2.75, z: -1.35, r: 1.05, aimY: 1.5,
+      title: '메인 볼트 강의 자산 아카이브',
+      line: '부트캠프·임원 AX·LLM Wiki·연구자 세컨드 브레인 강의에서 뽑아낸 핵심 명제들을 검색해 볼 수 있어요.',
+      kind: 'exhibit',
+      exhibit: 'mind-lectures',
+    },
+    {
+      id: 'exhibit-mind-illustrations',
+      x: -2.65, z: -2.35, r: 1.05, aimY: 1.55,
+      title: '지식관리 일러스트 갤러리',
+      line: 'CMDS 프로세스, 제텔카스텐 연결망, 멀티볼트 생태계를 그린 오리지널 일러스트 액자 컬렉션이에요.',
+      kind: 'exhibit',
+      exhibit: 'mind-illustrations',
+    },
+    {
+      id: 'board-mind',
+      x: -2.55, z: 2.35, r: 0.9, aimY: 1.25,
+      title: '생각 지도 퀴즈 리더보드',
+      line: '생각 지도 퀴즈 최고 기록과 내 순위를 확인해요.',
+      kind: 'board',
+      boardRoom: 'mind',
+    },
+  ],
   furniture: [
-    f('rug', -1.3, 1.1, -1.4, 1.0),
-    // 벽 가득 책장(창 양옆까지), 창 아래 읽는 책상, 실로 이은 카드 보드, 아홉 칸 서랍장, 작은 칠판
-    f('bookWall', -2.4, -2.05, -2.9, 2.1, '+x', true),
-    f('bookWall', -2.05, -0.75, -2.9, -2.55, '+z', true),
-    f('bookWall', 0.75, 2.4, -2.9, -2.55, '+z', true),
-    f('readingDesk', -0.65, 0.65, -2.9, -2.3, '+z', true),
-    f('chair', -0.25, 0.25, -2.15, -1.7, '-z', true),
-    f('corkBoard', 2.34, 2.4, -2.0, 0.6, '-x'),
-    f('drawers9', 1.95, 2.4, 0.95, 2.05, '-x', true),
-    f('chalkboard', -1.7, -0.5, 2.84, 2.9, '-z'),
-    f('armchair', -2.0, -1.2, 0.35, 1.15, '+x', true),
-    f('floorLamp', -1.95, -1.6, 1.35, 1.7),
-    f('plant', 1.9, 2.3, -2.5, -2.1, undefined, true),
-    f('pendant', -0.2, 0.2, -0.6, -0.2),
+    f('constellationMobile', -0.7, 0.7, -0.7, 0.7),
+    f('rug', -2.1, 2.1, -2.0, 1.6),
+    // 정면 파노라마 창 아래 지산 집필·리뷰 데스크
+    f('jisanDesk', -1.15, 1.15, -3.75, -2.95, '+z', true),
+    f('chair', -0.3, 0.3, -2.75, -2.25, '-z', true),
+    // 왼쪽·뒤쪽 지식관리 일러스트 액자 갤러리
+    f('pkmGallery', -3.72, -2.25, -4.18, -4.12, '+z'),
+    f('pkmGallery', -3.78, -3.72, 1.65, 3.85, '+x'),
+    // 오른쪽 벽: 메인 볼트 강의 자산 보드 + 아홉 칸 CMDS 서랍장 + 코르크 보드
+    f('lectureWall', 3.72, 3.78, -2.85, 0.05, '-x'),
+    f('drawers9', 3.25, 3.76, 0.75, 2.15, '-x', true),
+    f('corkBoard', 3.72, 3.78, 2.35, 3.75, '-x'),
+    // 장서 벽면과 독서 암체어, 리더보드 스탠드
+    f('bookWall', 2.25, 3.72, -4.18, -3.78, '+z', true),
+    f('bookWall', -3.76, -3.28, -3.85, -1.65, '+x', true),
+    f('armchair', -3.45, -2.55, -0.45, 0.45, '+x', true),
+    f('floorLamp', -3.45, -3.05, 0.65, 1.05),
+    f('leaderboardStand', -3.55, -2.95, 2.25, 2.82, '+x', true),
+    f('plant', 3.15, 3.65, -3.65, -3.15, undefined, true),
   ],
 };
 
+// ───────── 5. 글과 빛이 드는 곳 (문장 걸어 두기 · 청자 비색 & 우주의 호두 선반 · 리더보드)
 const STUDY: RoomSpec = {
-  slug: 'study', name: '빛이 드는 방', w: 5, d: 6, h: 2.6, ceiling: 2.59, floor: 'oak',
-  // 문으로 들어서면 맞은편 큰 창과 바닥에 드는 창살 빛 무늬가 먼저 보인다
+  slug: 'study', name: '글과 빛이 드는 곳', w: 6.0, d: 6.8, h: 2.75, ceiling: 2.74, floor: 'oak',
   door: { wall: '-z', at: 0, width: 1.0, top: 2.1 },
-  windows: [{ wall: '+z', from: -1.6, to: 1.6, sill: 0.5, top: 2.3 }],
-  spawn: { x: 0, z: -1.5, yaw: Math.PI },
-  exit: { x: 0, z: -2.4, r: 0.8 },
-  games: [{ x: -1.55, z: -0.1, r: 1.1 }],
+  windows: [
+    { wall: '+z', from: -1.95, to: 1.95, sill: 0.48, top: 2.38 },
+  ],
+  spawn: { x: 0, z: -1.85, yaw: Math.PI },
+  exit: { x: 0, z: -2.85, r: 0.75 },
+  games: [{ x: -1.45, z: -1.55, r: .8 }, { x: 1.6, z: -.15, r: .85 }, { x: -1.85, z: 1.1, r: .8 }],
+  extras: [
+    {
+      id: 'exhibit-study-walnut',
+      x: 1.75, z: 1.35, r: 0.95, aimY: 1.05,
+      title: '청자 비색 선반 & 호두 오브제',
+      line: '오늘 만난 좋은 문장과 고려청자·단청 문양 노트, 작은 호두 오브제를 살펴봅니다.',
+      kind: 'exhibit',
+      exhibit: 'study-walnut',
+    },
+    {
+      id: 'board-study',
+      x: 1.95, z: -2.05, r: 0.85, aimY: 1.25,
+      title: '문장 퍼즐 리더보드',
+      line: '빛 무늬 문장 놀이 최고 기록을 확인해요.',
+      kind: 'board',
+      boardRoom: 'study',
+    },
+  ],
   furniture: [
-    f('roundRug', -1.2, 0.6, 0.2, 2.0, '+z'),
-    f('lightPattern', -1.9, 1.5, -0.5, 2.4),
-    f('windowSeat', -1.3, 1.3, 2.4, 2.85, '-z', true),
-    f('sheerCurtain', -2.35, -1.62, 2.8, 2.86, '-z'),
-    f('sheerCurtain', 1.62, 2.35, 2.8, 2.86, '-z'),
-    // 문장 종이가 걸리는 긴 줄, 원고지 책상과 의자, 낮은 책장, 화분
-    f('sentenceLine', -2.4, -2.3, -2.4, 2.2, '+x'),
-    f('manuscriptDesk', 1.8, 2.4, -1.2, 0.3, '-x', true),
-    f('chair', 1.25, 1.65, -0.7, -0.25, '+x', true),
-    f('bookWall', 0.75, 2.4, -2.9, -2.55, '+z', true),
-    f('wallFrames', -2.1, -0.8, -2.9, -2.86, '+z'),
-    f('plant', 1.9, 2.35, 1.8, 2.3, undefined, true),
-    f('plant', -2.25, -1.9, 2.25, 2.6, undefined, true),
-    f('pendant', -0.5, -0.1, 0.7, 1.1),
+    f('roundRug', -1.35, 0.85, 0.1, 2.15, '+z'),
+    f('lightPattern', -2.05, 1.75, -0.4, 2.65),
+    f('lightShaft', -2.0, 1.95, -0.4, 3.33),
+    f('windowSeat', -1.55, 1.55, 2.82, 3.28, '-z', true),
+    f('sheerCurtain', -2.75, -2.02, 3.2, 3.26, '-z'),
+    f('sheerCurtain', 2.02, 2.75, 3.2, 3.26, '-z'),
+    f('sentenceLine', -2.85, -2.75, -2.55, 2.45, '+x'),
+    f('inkWritingDesk', 2.15, 2.85, -0.95, 0.55, '-x', true),
+    f('chair', 1.55, 1.98, -0.45, 0.05, '+x', true),
+    f('celadonShelf', 2.25, 2.85, 1.05, 2.15, '-x', true),
+    f('leaderboardStand', 2.28, 2.82, -2.55, -1.98, '-x', true),
+    f('poetryShelf', -2.65, -0.85, -3.3, -2.92, '+z', true),
+    f('plant', 2.25, 2.75, 2.45, 2.95, undefined, true),
+    f('pendant', -0.4, 0.0, 0.65, 1.05),
   ],
 };
 
+// ───────── 6. 손님방 (달빛 소나무 정원 전망 · 환영 다기 세트)
 const GUEST: RoomSpec = {
-  slug: 'guest', name: '손님방', w: 5, d: 6, h: 2.6, ceiling: 2.59, floor: 'oak',
-  // 문으로 들어서면 왼쪽 안에 정돈된 침대, 오른쪽 벽에 옷장과 방명록 책상. 놀이는 없고 쉬어 가는 방
-  door: { wall: '+z', at: 1.4, width: 1.0, top: 2.1 },
-  windows: [{ wall: '-z', from: 0.2, to: 1.6, sill: 0.9, top: 2.15 }],
-  spawn: { x: 1.4, z: 1.5, yaw: 0 },
-  exit: { x: 1.4, z: 2.4, r: 0.8 },
+  slug: 'guest', name: '손님방', w: 5.6, d: 6.4, h: 2.7, ceiling: 2.69, floor: 'oak',
+  door: { wall: '+z', at: 1.45, width: 1.0, top: 2.1 },
+  windows: [{ wall: '-z', from: -0.95, to: 1.65, sill: 0.78, top: 2.25 }],
+  spawn: { x: 1.45, z: 1.65, yaw: 0 },
+  exit: { x: 1.45, z: 2.65, r: 0.75 },
   games: [],
+  extras: [
+    {
+      id: 'exhibit-guest-welcome',
+      x: 1.45, z: -0.45, r: 0.95, aimY: 1.0,
+      title: '손님맞이 다기 세트 & 안내첩',
+      line: '조연당을 찾아 주신 손님을 위한 환영 인사와 계절 차 안내 카드가 놓여 있어요.',
+      kind: 'exhibit',
+      exhibit: 'guest-welcome',
+    },
+  ],
   furniture: [
-    f('rug', -1.4, 1.0, -0.8, 1.4),
-    // 머리판을 뒤 벽에 댄 침대와 개어 둔 담요, 침대 옆 탁자와 등, 발치의 짐 의자
-    f('bed', -2.35, -0.95, -2.9, -0.9, '+z', true),
-    f('sideTable', -0.85, -0.4, -2.9, -2.45, '+z', true),
-    f('bench', -2.2, -1.1, -0.75, -0.4, '+z', true),
-    f('sheerCurtain', -0.3, 0.15, -2.86, -2.8, '+z'),
-    f('sheerCurtain', 1.65, 2.1, -2.86, -2.8, '+z'),
-    // 오른쪽 벽: 작은 옷장, 방명록과 「어서 오세요」 카드가 놓인 책상과 의자
-    f('wardrobe', 1.85, 2.4, -2.6, -1.5, '-x', true),
-    f('guestDesk', 1.85, 2.4, -0.9, 0.2, '-x', true),
-    f('chair', 1.3, 1.7, -0.6, -0.15, '+x', true),
-    f('wallFrames', -2.4, -2.36, 0.4, 1.6, '+x'),
-    f('plant', -2.3, -1.9, 2.3, 2.7, undefined, true),
+    f('rug', -1.65, 1.15, -0.95, 1.45),
+    f('bed', -2.65, -1.15, -3.1, -1.05, '+z', true),
+    f('sideTable', -1.02, -0.55, -3.1, -2.62, '+z', true),
+    f('bench', -2.45, -1.3, -0.88, -0.52, '+z', true),
+    f('sheerCurtain', -1.35, -0.98, -3.06, -3.0, '+z'),
+    f('sheerCurtain', 1.7, 2.25, -3.06, -3.0, '+z'),
+    f('wardrobe', 2.12, 2.68, -2.85, -1.65, '-x', true),
+    f('guestDesk', 2.12, 2.68, -1.05, 0.15, '-x', true),
+    f('chair', 1.52, 1.95, -0.68, -0.22, '+x', true),
+    f('wallFrames', -2.68, -2.62, 0.35, 1.75, '+x'),
+    f('plant', -2.55, -2.1, 2.45, 2.9, undefined, true),
     f('pendant', -0.4, 0, -0.2, 0.2),
   ],
 };
 
+// ───────── 7. 작업 차고 · 이동식 작전 본부 (그레나디어+스타링크 · CLA 45 AMG · X3 취소→티구안 도면/다이캐스트 · AI 하네스 랩)
 const GARAGE: RoomSpec = {
-  slug: 'garage', name: '작업 차고', w: 5, d: 6, h: 2.8, ceiling: 2.79, floor: 'tile',
-  // 문으로 들어서면 맞은편 벽에 작업대와 공구 벽, 왼쪽에 상자 선반, 오른쪽에 세워 둔 자전거
-  door: { wall: '+z', at: -1.4, width: 1.0, top: 2.1 },
-  windows: [{ wall: '+x', from: -1.0, to: 0.4, sill: 1.1, top: 2.1 }],
-  spawn: { x: -1.4, z: 1.5, yaw: 0 },
-  exit: { x: -1.4, z: 2.4, r: 0.8 },
+  slug: 'garage', name: '작업 차고', w: 10.2, d: 9.6, h: 3.4, ceiling: 3.39, floor: 'tile',
+  door: { wall: '+z', at: 0, width: 1.15, top: 2.2 },
+  windows: [
+    { wall: '-z', from: -3.85, to: -0.65, sill: 0.45, top: 2.85 },
+    { wall: '-z', from: 0.65, to: 3.85, sill: 0.45, top: 2.85 },
+    { wall: '+x', from: -1.85, to: 1.05, sill: 0.92, top: 2.48 },
+  ],
+  spawn: { x: 0, z: 3.25, yaw: 0 },
+  exit: { x: 0, z: 4.25, r: 0.78 },
   games: [],
+  extras: [
+    {
+      id: 'exhibit-garage-grenadier',
+      x: -1.05, z: 1.45, r: 1.1, aimY: 1.35,
+      title: '이네오스 그레나디어 · 스타링크 이동식 작전 본부',
+      line: '루프랙 위 스타링크 위성 안테나와 카고 오피스를 탑재한 1호 이동식 작전 본부(이작본)를 점검해요.',
+      kind: 'exhibit',
+      exhibit: 'garage-grenadier',
+    },
+    {
+      id: 'exhibit-garage-cla45',
+      x: 1.05, z: 1.45, r: 1.1, aimY: 1.05,
+      title: '메르세데스-AMG CLA 45 · 퍼포먼스 쿠페',
+      line: '실버 스트라이프와 옐로우 에어로 립 포인트가 살아 있는 4MATIC+ 퍼포먼스 쿠페와 듀얼 도면을 살펴봐요.',
+      kind: 'exhibit',
+      exhibit: 'garage-cla45',
+    },
+    {
+      id: 'exhibit-garage-harness',
+      x: -3.55, z: -0.15, r: 1.1, aimY: 1.2,
+      title: '멀티디바이스 AI 하네스 & 장비 설계 본부',
+      line: '주 관제 노트북·스튜디오 워커·GPU 노드·스타링크·인산철 파워뱅크를 설계하고 세팅하는 엔지니어링 벤치예요.',
+      kind: 'exhibit',
+      exhibit: 'garage-harness',
+    },
+    {
+      id: 'exhibit-garage-tiguan',
+      x: 3.55, z: 2.55, r: 1.1, aimY: 1.35,
+      title: '구매 계획 도면(X3 취소 → 티구안 확정!) & 다이캐스트',
+      line: '아버님께 "왜 X3를 사냐!" 혼나고 급선회한 폭스바겐 티구안 확정 도면과 1:18 다이캐스트 전시대예요.',
+      kind: 'exhibit',
+      exhibit: 'garage-tiguan',
+    },
+  ],
   furniture: [
-    f('workbench', -1.3, 0.7, -2.9, -2.25, '+z', true),
-    f('pegboard', -1.3, 0.7, -2.9, -2.86, '+z'),
-    f('stool', -0.5, -0.1, -1.95, -1.55, undefined, true),
-    f('boxShelf', -2.4, -1.95, -2.6, -0.6, '+x', true),
-    f('bicycle', 1.9, 2.4, 0.6, 2.3, '-x', true),
-    f('corkBoard', 0.2, 1.6, 2.84, 2.9, '-z'),
-    f('plant', 1.95, 2.35, -2.5, -2.1, undefined, true),
-    f('pendant', -0.4, 0, -0.6, -0.2),
+    f('garageBayLines', -3.65, 3.65, -3.85, 1.55),
+    f('garageTrackLight', -3.45, 3.45, -2.95, 2.35),
+    // Bay 1: 이네오스 그레나디어 3D + 후면 이동식 작전 본부(MCC) 필드 전개 카트 / Bay 2: 벤츠 CLA 45 AMG 3D
+    f('grenadier', -2.62, -0.62, -3.15, 1.25, '+z', true),
+    f('mccFieldCart', -2.25, -1.05, -4.52, -3.95, '+z', true),
+    f('cla45', 0.65, 2.65, -3.15, 1.15, '+z', true),
+
+    // 왼쪽 엔지니어링 구역: 멀티디바이스 AI 하네스 관제 벤치 + 공구 캐비닛 + 익스페디션 블루프린트 월
+    f('opsCommandRig', -4.95, -4.05, -1.55, 1.25, '+x', true),
+    f('stool', -3.98, -3.62, 0.85, 1.21, undefined, true),
+    f('pegboard', -4.98, -4.92, -1.55, 1.25, '+x'),
+    f('toolCabinet', -4.95, -4.25, 1.55, 3.05, '+x', true),
+    f('blueprintWall', -4.98, -4.92, -4.35, -1.85, '+x'),
+    f('boxShelf', -4.95, -4.35, 3.25, 4.45, '+x', true),
+
+    // 오른쪽 구역: 듀얼 차량 도면 월 + (X3 취소 → 티구안 확정!) 벽면 구매 계획 보드 & 1:18 다이캐스트 전시대
+    f('blueprintWall', 4.92, 4.98, -4.35, -2.05, '-x'),
+    f('tiguanPlanWall', 4.92, 4.98, 1.35, 3.85, '-x'),
+    f('diecastDisplay', 4.15, 4.82, 1.95, 3.15, '-x', true),
+    f('bicycle', 4.35, 4.92, -1.65, -0.15, '-x', true),
+
+    // 천장 작업등 두 줄
+    f('pendant', -2.35, -1.95, -1.2, -0.8),
+    f('pendant', 1.95, 2.35, -1.2, -0.8),
+    f('pendant', -0.2, 0.2, 1.8, 2.2),
   ],
 };
 
@@ -351,12 +567,10 @@ const SPECS: Record<string, RoomSpec> = {
   gable: GABLE, toybox: TOYBOX, target: TARGET, mind: MIND, study: STUDY, guest: GUEST, garage: GARAGE,
 };
 
-/** 시험용: 손질 뒤 크기로 적은 가구 자리(벽에 꼭 맞는지 맞춰 본다) */
 export function authoredFurniture(slug: string): Furniture[] {
   return SPECS[slug]?.furniture.map((it) => ({ ...it })) ?? [];
 }
 
-/** 방 장면 하나를 짓는다. 장면이 없는 방이면 null. 부를 때마다 새 객체를 돌려준다. */
 export function buildRoomWorld(slug: string): HouseWorld | null {
   const spec = SPECS[slug];
   return spec ? buildRoom(spec) : null;

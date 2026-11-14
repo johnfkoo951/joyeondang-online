@@ -1,0 +1,45 @@
+/* 도장: 찍히는 그림(도장이 위에서 내려와 「쿵」 찍히고 먹이 번진다), 결과 한 줄, 찍음 단추. 색은 사이트 토큰만 */
+
+.sealWrap { position: relative; display: inline-grid; place-items: center; flex: none; }
+.seal { display: block; width: var(--seal-size, 148px); height: var(--seal-size, 148px); color: var(--roof); transform: rotate(-6deg); }
+.seal[data-state="off"] { color: var(--ink-3); }
+.seal text { font-family: var(--font); font-weight: 800; }
+/* 먹 번짐: 찍힌 순간 도장 둘레로 한 번 퍼진다 */
+.ink { position: absolute; inset: 6%; border-radius: 50%; border: 3px solid var(--roof); opacity: 0; pointer-events: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sealWrap[data-press] .seal { animation: stamp-press 0.62s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+  .sealWrap[data-press] .ink { animation: stamp-ink 0.7s ease-out 0.24s both; }
+  .feedback[data-kind="new"] { animation: stamp-feedback 0.26s ease-out both; }
+}
+@keyframes stamp-press {
+  0% { transform: translateY(-30%) scale(1.7) rotate(-16deg); opacity: 0; }
+  42% { transform: translateY(0) scale(0.9) rotate(-5deg); opacity: 1; }
+  62% { transform: scale(1.05) rotate(-6deg); }
+  100% { transform: scale(1) rotate(-6deg); opacity: 1; }
+}
+@keyframes stamp-ink {
+  0% { transform: scale(0.86); opacity: 0.6; }
+  100% { transform: scale(1.38); opacity: 0; }
+}
+@keyframes stamp-feedback { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* 결과 한 줄(찍은 도장 그림 + 글) */
+.feedback {
+  display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; border-radius: 14px;
+  background: color-mix(in srgb, var(--roof) 8%, var(--paper)); border: 1px solid color-mix(in srgb, var(--roof) 40%, var(--line));
+}
+.feedback[data-kind="have"] { background: var(--paper-2); border-color: var(--line); }
+.feedback[data-kind="fail"] { background: var(--paper-2); border-color: var(--warn); padding: 10px 14px; }
+.feedbackText { margin: 0; font-weight: 800; line-height: 1.45; }
+.feedback[data-kind="fail"] .feedbackText { color: var(--warn); }
+.feedbackSub { margin: 2px 0 0; font-size: 0.86rem; color: var(--ink-2); }
+
+/* 찍은 뒤의 단추: 눌러도 아무 일 없다(초점은 그대로 둔다: 창 안에서 Tab이 끊기지 않게).
+   흐린 「못 누름」이 아니라 도장 색의 「✓ 찍음」으로 보인다(사이트 공통 .btn[aria-disabled]보다 앞서게 한 번 더 건다) */
+.pressed.pressed[data-done] {
+  opacity: 1; cursor: default; color: var(--roof);
+  background: color-mix(in srgb, var(--roof) 12%, var(--paper)); border-color: color-mix(in srgb, var(--roof) 45%, var(--line));
+}
+.pressed svg { flex: none; }
+.stack { display: grid; gap: 10px; justify-items: start; }

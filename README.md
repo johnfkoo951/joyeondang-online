@@ -41,6 +41,7 @@ With no keys at all, the site runs and the redrawn house is open to everyone. Lo
 2. **Vercel** or any Next.js host: set the same variables. Server-only and optional: `SUPABASE_SECRET_KEY`, `HOUSE_WORLD_GZ` (a real-scale house shown only to invited guests), `FAMILY_ROOMS_JSON` (name tags on room doors).
 3. **Game server** (optional): in `game-server/`, run `npx wrangler secret put GAME_TOKEN_SECRET`, set `ALLOWED_ORIGINS` and your own route in `wrangler.jsonc`, then `npx wrangler deploy`. Give the site `GAME_SERVER_URL` and the same `GAME_TOKEN_SECRET`.
 4. **Photo characters** (optional): see [worker/avatar/README.md](worker/avatar/README.md). Off unless `AVATAR_ENABLED=1`. Characters are always drawn kindly.
+5. **Kitchen photo gallery** (real house only): empty picture frames are hung on the free wall spans of any zone whose label names a kitchen (`src/walk/gallery.ts`). Exhibits live in the private `gallery` storage bucket (`manifest.json` plus images) and are filled from the admin page; guests get short-lived signed URLs. The frames are off unless `KITCHEN_GALLERY=1` (the admin page can fill them while they are off).
 
 ## Privacy gate
 

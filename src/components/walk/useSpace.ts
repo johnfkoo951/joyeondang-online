@@ -6,10 +6,42 @@ import { buildWorld } from '@/content/world';
 import type { View } from '@/walk/scene';
 import type { HouseWorld, Level } from '@/walk/types';
 import { clearRoom, hrefWithRoom, readPos, readRoom, roomFromSearch, startRoom, writeRoom } from './memory';
+import { readChosenMap } from './walk-map';
 
 export type Space = { kind: 'house' } | { kind: 'room'; slug: string };
 /** 새로 지은 장면에서 설 자리 */
 export type Arrive = { x: number; z: number; level: Level; yaw: number; view?: View };
+
+/** 실제 집을 기다리는 시간(한 번에). 넘으면 끊고 한 번 더 받아 본다 */
+const HOUSE_TIMEOUT_MS = 9000;
+const HOUSE_RETRY_MS = 1200;
+
+/**
+ * 실제 집 받기. 응답이 늦거나 끊기면 한 번 더 받고, 그래도 안 되면 null(그림 집으로 걷고, 다시 받기를 권한다).
+ * 「없다」는 답(404: 손님이 아니거나 집 데이터가 없음)은 'none': 다시 받아도 같으므로 권하지 않는다.
+ * 관리자의 실측 1층 시험 지도도 같은 길로 받는다(/api/house-shell, 종류 'shell').
+ */
+async function fetchHouse(url = '/api/house', kind: 'real' | 'shell' = 'real'): Promise<HouseWorld | 'none' | null> {
+  for (let i = 0; i < 2; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), HOUSE_TIMEOUT_MS);
+    try {
+      const r = await fetch(url, { cache: 'no-store', credentials: 'same-origin', signal: ac.signal });
+      if (r.ok) {
+        const w = (await r.json()) as HouseWorld;
+        if (w && w.kind === kind) return w;
+      }
+      // 손님이 아니거나 집 데이터가 없다는 답은 다시 받아도 같다
+      if (r.status === 404) return 'none';
+    } catch {
+      // 시간 초과·끊김: 한 번 더
+    } finally {
+      clearTimeout(timer);
+    }
+    if (i === 0) await new Promise((res) => setTimeout(res, HOUSE_RETRY_MS));
+  }
+  return null;
+}
 
 const roomWorld = (slug: string): HouseWorld | null => {
   try {
@@ -23,14 +55,18 @@ const roomWorld = (slug: string): HouseWorld | null => {
  * 지금 걷는 공간(집 또는 방 장면)과 그 세계.
  * 처음에는 주소의 ?room= → 이 기기에 남은 방 → 집 순서. 방이면 주소에 ?room=<slug>, 집이면 query 없음.
  * 집 세계는 한 번만 받아(손님이면 실제 집) 방을 드나들어도 다시 받지 않는다.
+ * shellMap(관리자)이면 고른 지도(walk-map.ts)가 실측 1층일 때 그것을 먼저 받고, 못 받으면 평소 집으로 간다.
  */
-export function useSpace(doors: Record<string, Door>, realHouse: boolean) {
+export function useSpace(doors: Record<string, Door>, realHouse: boolean, shellMap = false) {
   const doorsRef = useRef(doors);
   const real = useRef(realHouse);
+  const shell = useRef(shellMap);
   const house = useRef<Promise<HouseWorld> | null>(null);
   const arrive = useRef<Arrive | null>(null);
   const [space, setSpace] = useState<Space | null>(null);
   const [world, setWorld] = useState<HouseWorld | null>(null);
+  /** 손님인데 실제 집을 받지 못해 그림 집으로 걷는 중인가(화면이 「다시 받기」를 보여 준다) */
+  const [fellBack, setFellBack] = useState(false);
 
   useEffect(() => {
     doorsRef.current = doors;
@@ -44,14 +80,37 @@ export function useSpace(doors: Record<string, Door>, realHouse: boolean) {
 
   const loadHouse = useCallback((): Promise<HouseWorld> => {
     const fallback = () => buildWorld(doorsRef.current);
-    house.current ??= real.current
-      ? fetch('/api/house', { cache: 'no-store', credentials: 'same-origin' })
-        .then((r) => (r.ok ? (r.json() as Promise<HouseWorld>) : null))
-        .catch(() => null)
-        .then((w) => (w && w.kind === 'real' ? w : fallback()))
-      : Promise.resolve().then(fallback);
+    const usual = (): Promise<HouseWorld> => (real.current
+      ? fetchHouse().then((w) => {
+        // 못 받은 까닭이 일시적일 때만(시간 초과·끊김·서버 오류) 「다시 받기」를 보인다
+        setFellBack(w === null);
+        return w && w !== 'none' ? w : fallback();
+      })
+      : Promise.resolve().then(fallback));
+    house.current ??= shell.current && readChosenMap() === 'shell'
+      ? fetchHouse('/api/house-shell', 'shell').then((w) => (w && w !== 'none' ? w : usual()))
+      : usual();
     return house.current;
   }, []);
+
+  /** 실제 집을 다시 받아 본다(그림 집으로 걷는 중일 때). 받으면 집 장면을 새로 짓는다 */
+  const retryHouse = useCallback(() => {
+    if (!real.current) return;
+    house.current = null;
+    setFellBack(false);
+    void loadHouse().then((w) => {
+      if (w.kind === 'real') setWorld((cur) => (cur && cur.kind !== 'room' ? w : cur));
+    });
+  }, [loadHouse]);
+
+  /** 집 세계를 새로 받는다(관리자가 지도를 바꿨을 때). 집에 있으면 받은 세계로 장면을 새로 짓는다 */
+  const reloadHouse = useCallback(async () => {
+    house.current = null;
+    arrive.current = null;
+    setFellBack(false);
+    const w = await loadHouse();
+    setWorld((cur) => (cur && cur.kind !== 'room' ? w : cur));
+  }, [loadHouse]);
 
   useEffect(() => {
     let slug: string | null = null;
@@ -115,5 +174,5 @@ export function useSpace(doors: Record<string, Door>, realHouse: boolean) {
     setSpace({ kind: 'house' });
   }, [loadHouse]);
 
-  return { space, world, canEnter, takeArrive, enterRoom, leaveRoom };
+  return { space, world, canEnter, takeArrive, enterRoom, leaveRoom, fellBack, retryHouse, reloadHouse };
 }

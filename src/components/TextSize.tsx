@@ -24,9 +24,17 @@ export function TextSize() {
     }
     listeners.forEach((l) => l());
   }
+  // 글은 늘 「큰 글씨」, 켜졌는지는 aria-pressed와 칩 모양(globals.css .chip[aria-pressed="true"])으로 보인다.
+  // 글을 「보통 글씨」로 바꾸면 화면 읽기가 「보통 글씨, 눌림」으로 읽어 무엇이 켜졌는지 반대로 들린다.
+  // 화면 말마다 단추를 하나씩 두고 CSS가 고른 말의 단추만 보인다(머리줄이라 그리기 전에 정해지게, components/i18n/T와 같은 방식)
   return (
-    <button type="button" className="chip" onClick={toggle} aria-pressed={large} title="큰 글씨">
-      {large ? '보통 글씨' : '큰 글씨'}
-    </button>
+    <>
+      <button data-ko="" type="button" className="chip" onClick={toggle} aria-pressed={large}>
+        큰 글씨
+      </button>
+      <button data-en="" lang="en" type="button" className="chip" onClick={toggle} aria-pressed={large}>
+        Large text
+      </button>
+    </>
   );
 }

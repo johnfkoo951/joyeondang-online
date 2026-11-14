@@ -1,4 +1,6 @@
 // 소리는 모두 Web Audio로 그 자리에서 만든다(음원 파일 없음). 첫 소리는 누르는 동작 뒤에 켠다.
+// iOS 무음 스위치와 상관없이 들리게 재생 세션으로 연다(../audio-session).
+import { openAudioContext } from '../audio-session';
 export type SoundName = 'throw' | 'pop' | 'gold' | 'duck' | 'can' | 'board' | 'miss' | 'bump' | 'tick' | 'count' | 'go' | 'clear' | 'end';
 
 export type Sound = {
@@ -10,7 +12,6 @@ export type Sound = {
   close(): void;
 };
 
-type Ctor = typeof AudioContext;
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
 
 export function createSound(initialMuted: boolean): Sound {
@@ -95,9 +96,8 @@ export function createSound(initialMuted: boolean): Sound {
     unlock() {
       try {
         if (!ac) {
-          const C: Ctor | undefined = window.AudioContext ?? (window as unknown as { webkitAudioContext?: Ctor }).webkitAudioContext;
-          if (!C) return;
-          ac = new C();
+          ac = openAudioContext();
+          if (!ac) return;
           master = ac.createGain();
           master.gain.value = 0.55;
           master.connect(ac.destination);

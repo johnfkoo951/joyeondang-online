@@ -41,6 +41,7 @@ export const AREA_SCOPE = {
   stamps: 'guests', // 도장과 수첩
   games: 'guests', // 방 놀이
   realHouse: 'guests', // 실제 축척의 집 안 걷기(2026-11-08 결정). 데이터는 저장소에 없고 서버가 명단 손님에게만 내려준다
+  gallery: 'guests', // 실제 집 부엌의 사진 갤러리 전시 목록과 그림(비공개 버킷, 서버가 명단 손님에게만 서명 주소를 준다)
 } as const satisfies Record<string, Scope>;
 
 export type Area = keyof typeof AREA_SCOPE;
@@ -62,4 +63,20 @@ export const SCOPE_LABEL: Record<Scope | 'self', string> = {
   family: '가족만',
   guests: '초대 손님까지',
   public: '인터넷 누구나',
+};
+
+// 화면이 영어일 때의 이름(한국어 표는 그대로 두고 나란히 둔다). 역할 이름은 걷기 화면의 「이름 대신 쓰는 말」과 같은 낱말을 쓴다
+export const ROLE_LABEL_EN: Record<Role, string> = {
+  public: 'Visitor',
+  visitor: 'Pending guest',
+  guest: 'Invited guest',
+  family: 'Family',
+  admin: 'Host',
+};
+
+export const SCOPE_LABEL_EN: Record<Scope | 'self', string> = {
+  self: 'Only me',
+  family: 'Family only',
+  guests: 'Invited guests',
+  public: 'Anyone online',
 };

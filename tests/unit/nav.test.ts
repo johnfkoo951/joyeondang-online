@@ -26,7 +26,7 @@ registerHooks({
 });
 
 const { buildWorld, L2Y, STAIRS } = await import('../../src/content/world.ts');
-const { CELL, destinations, findPath } = await import('../../src/walk/nav.ts');
+const { CELL, destinations, findPath, navReady, navStats, pauseNav, prepareNav, relaxNav } = await import('../../src/walk/nav.ts');
 const { blocked, heightAt, inRamp, levelOf, step } = await import('../../src/walk/physics.ts');
 const { tuneWorld } = await import('../../src/walk/tune.ts');
 type NavPoint = import('../../src/walk/nav.ts').NavPoint;
@@ -254,3 +254,68 @@ test('첫 점은 몸 자리 그대로, 계단 한가운데에서 출발해도 �
   assert.equal(end.level, 1);
   assert.ok(Math.hypot(end.x - 6, end.z - 7) < 1.2, '석등 앞');
 });
+
+// ───────── 격자 미리 만들기(걷는 사이 틈틈이)
+
+const wait = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
+
+for (const [name, w] of worlds) {
+  /** 같은 내용의 새 세계(격자가 아직 없는 객체) */
+  const fresh = (): HouseWorld => (w === redrawn ? buildWorld({}) : structuredClone(w));
+
+  test(`${name}: 조각내어 미리 만든 격자는 한 번에 만든 것과 같다(마디·간선 수, 갈 곳, 모든 길)`, async () => {
+    const f = fresh();
+    assert.equal(navReady(f), false);
+    const done = prepareNav(f, { urgent: true });
+    assert.equal(navReady(f), false, '부른 자리에서는 만들지 않는다(화면을 붙잡지 않는다)');
+    await done;
+    assert.equal(navReady(f), true);
+    assert.deepEqual(navStats(f), navStats(w));
+    const ds = destinations(w);
+    assert.deepEqual(destinations(f), ds);
+    const from = spawnOf(w);
+    for (const d of ds) assert.deepEqual(findPath(f, from, d), findPath(w, from, d));
+    // 다 만든 뒤에는 바로 풀린다
+    await prepareNav(f);
+  });
+
+  test(`${name}: 첫 조각이 돌기 전에 길을 찾으면 그 자리에서 다 만들고, 기다리던 쪽도 풀린다`, async () => {
+    const f = fresh();
+    const done = prepareNav(f, { delayMs: 60_000 });
+    assert.deepEqual(destinations(f), destinations(w));
+    assert.equal(navReady(f), true);
+    await done;
+  });
+
+  test(`${name}: 몇 조각 만든 도중에 길을 찾으면 남은 몫만 마저 만들고, 기다리던 쪽도 풀린다`, async (t) => {
+    const f = fresh();
+    // 시계를 건너뛰게 해서 조각마다 한 걸음만 돌린다: 기계가 빨라도 몇 조각으로는 다 만들지 못한다
+    let ticks = 0;
+    t.mock.method(performance, 'now', () => (ticks += 1) * 1000);
+    const done = prepareNav(f, { urgent: true });
+    await wait(5);
+    assert.ok(ticks >= 2, '조각이 하나도 돌지 않았다');
+    assert.equal(navReady(f), false, '도중이어야 하는데 벌써 다 만들었다');
+    assert.deepEqual(destinations(f), destinations(w));
+    assert.equal(navReady(f), true);
+    assert.deepEqual(navStats(f), navStats(w));
+    await done;
+  });
+
+  test(`${name}: 멈추면 더 만들지 않고, 다시 부르면 이어서 끝낸다`, async () => {
+    const f = fresh();
+    const done = prepareNav(f, { urgent: true });
+    pauseNav(f);
+    // 기다리는 시간을 기계 빠르기에 맡기지 않는다: 멈추지 않았다면 먼저 시작한 f가 같은 내용의 쌍둥이보다 먼저 끝난다
+    await prepareNav(fresh(), { urgent: true });
+    await wait(40);
+    assert.equal(navReady(f), false, '멈춘 동안에는 돌지 않는다');
+    assert.equal(prepareNav(f), done, '같은 세계는 같은 일을 이어 간다');
+    // 기다리던 쪽이 떠나도(패널을 닫음) 틈틈이 도는 빠르기로 끝까지 만든다
+    void prepareNav(f, { urgent: true });
+    relaxNav(f);
+    await done;
+    assert.equal(navReady(f), true);
+    assert.deepEqual(navStats(f), navStats(w));
+  });
+}

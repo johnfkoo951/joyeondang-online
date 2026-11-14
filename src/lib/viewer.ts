@@ -14,6 +14,11 @@ export type Viewer = {
   pendingRequest: boolean;
   doll: string | null;
   dollColor: string | null;
+  /**
+   * 역할을 확인하지 못했다(인증 서버나 DB가 잠깐 답하지 않았다). role은 낮게 잡혀 있지만 「명단 밖」으로 확인된 것이 아니다.
+   * 「없음」「지웠음」처럼 화면이 굳혀 버리는 답 대신 잠시 뒤 다시 묻게 하는 답(503 등)을 줄 때 본다
+   */
+  unsure?: boolean;
 };
 
 const NOBODY: Viewer = {
@@ -33,10 +38,12 @@ const NOBODY: Viewer = {
 export const getViewer = cache(async (): Promise<Viewer> => {
   if (!supabaseReady()) return NOBODY;
   const supabase = await createClient();
-  const { data } = await supabase.auth.getClaims();
+  // 세션이 없으면 data·error 모두 비어 온다. error가 있으면 확인하지 못한 것이다(시간 넘김, 요청 한도 등)
+  const { data, error: claimsError } = await supabase.auth.getClaims();
+  if (claimsError) return { ...NOBODY, ready: true, unsure: true };
   if (!data?.claims?.sub) return { ...NOBODY, ready: true };
   const { data: me, error } = await supabase.rpc('whoami');
-  if (error || !me) return { ...NOBODY, ready: true, signedIn: true, role: 'visitor' };
+  if (error || !me) return { ...NOBODY, ready: true, signedIn: true, role: 'visitor', unsure: Boolean(error) };
   const info = me as Record<string, unknown>;
   return {
     ready: true,

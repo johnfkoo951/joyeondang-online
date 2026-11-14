@@ -24,6 +24,11 @@ export const IconDoor = (p: P) => (
     <path d="M14 4H6v16h8M10 12h10M17 9l3 3-3 3" />
   </svg>
 );
+export const IconCheck = (p: P) => (
+  <svg {...base(p)} fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </svg>
+);
 export const IconEar = (p: P) => (
   <svg {...base(p)} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
     <path d="M7 10a5 5 0 1 1 10 0c0 3-3 4-3 6.5A2.5 2.5 0 0 1 9 17" />

@@ -1,0 +1,180 @@
+/* 캐릭터 관리 콘솔(/admin/characters). 휴대폰 먼저: 그림 카드의 갤러리가 휴대폰에서 두 줄, 넓어지면 셋·넷·다섯 줄.
+   카드를 펼치면 그 카드가 한 줄을 다 쓰고 자세한 상태와 조작 단추가 나온다 */
+.console { display: grid; gap: 14px; }
+/* 휴대폰 먼저: 이 화면의 작은 단추도 늘 44px(손가락 기기라고 알리지 않는 휴대폰·태블릿도 있다) */
+.console :global(.btn-small) { min-height: 44px; }
+.lead { margin: 0; color: var(--ink-2); }
+.where { margin: 0; font-size: 0.86em; color: var(--ink-3); }
+.fine { margin: 0; font-size: 0.86em; color: var(--ink-3); }
+.srOnly {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* 보기(2D 그림 · 3D 모형): 거르기와 따로 노는 두 칸 단추. 고른 칸이 떠 보인다 */
+.views {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: var(--paper-3);
+}
+.view {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 0;
+  border-radius: 999px; background: transparent; color: var(--ink-2); font: inherit; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.view[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 4px rgb(0 0 0 / 0.16); }
+/* 어두운 화면은 종이가 가장 어두워 고른 칸이 꺼져 보인다: 한 단계 밝게 */
+@media (prefers-color-scheme: dark) {
+  .view[aria-pressed="true"] { background: color-mix(in srgb, var(--ink) 14%, var(--paper-3)); }
+}
+
+/* 찾기와 거르기 */
+.tools { display: grid; gap: 10px; }
+.search input { width: 100%; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line-2); border-radius: 10px; padding: 12px 14px; }
+/* 거르기 칩: 휴대폰에서는 한 줄로 옆으로 밀어 본다(줄이 넘쳐 화면이 옆으로 밀리지 않게) */
+.chips {
+  display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; margin: 0 -2px;
+  scrollbar-width: thin; -webkit-overflow-scrolling: touch;
+}
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: var(--paper-2); color: var(--ink); font: inherit; font-size: 0.9em; cursor: pointer; white-space: nowrap;
+}
+.chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); font-weight: 700; }
+.chip[data-tone="warn"]:not([aria-pressed="true"]) { border-color: var(--warn); }
+.count { font-size: 0.82em; font-weight: 700; padding: 0 7px; border-radius: 999px; background: var(--paper-3); color: var(--ink-2); }
+.chip[aria-pressed="true"] .count { background: color-mix(in srgb, var(--paper) 22%, transparent); color: var(--paper); }
+.view .count { background: color-mix(in srgb, var(--ink) 9%, transparent); }
+.selects { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.select { display: grid; gap: 4px; font-size: 0.86em; font-weight: 700; color: var(--ink-2); }
+.select select { padding: 10px 12px; min-height: 44px; }
+
+.status { margin: 0; min-height: 1.2em; font-size: 0.9em; color: var(--pine); font-weight: 700; }
+.status:empty { display: none; }
+
+/* 갤러리. 카드와 자세히의 자리는 CSS order로 정한다(카드 i는 2i, 펼친 카드의 자세히는 그 줄 끝 다음) */
+.list {
+  --gap: 12px;
+  list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap); grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.card {
+  display: grid; gap: 10px; align-content: start; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--paper-2); min-width: 0;
+}
+.card[data-tone="warn"] { border-color: color-mix(in srgb, var(--warn) 55%, var(--line)); }
+/* 펼친 카드는 제자리에서 초록 테두리로 */
+.card[data-open] { border-color: var(--pine); box-shadow: 0 0 0 1px var(--pine); }
+/* 조작 뒤 단추가 없는 카드나 알림 줄로 초점이 돌아올 때 */
+.card:focus-visible, .status:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* 자세히: 펼친 카드가 있는 줄 바로 아래에 한 줄을 다 쓴다. 위의 꼭지가 그 카드의 칸을 가리킨다(--col, --cols) */
+.panel {
+  position: relative; grid-column: 1 / -1; display: grid; gap: 10px; min-width: 0; margin-top: 4px; padding: 12px;
+  border: 1px solid var(--pine); border-radius: var(--radius); background: var(--paper-2);
+}
+.panel::before {
+  content: ""; position: absolute; top: -8px; width: 14px; height: 14px; transform: rotate(45deg);
+  left: calc((100% + var(--gap)) / var(--cols) * (var(--col) + 0.5) - var(--gap) / 2 - 7px);
+  border-left: 1px solid var(--pine); border-top: 1px solid var(--pine); background: var(--paper-2);
+}
+.panelTitle { margin: 0; font-size: 1.05em; line-height: 1.4; font-weight: 800; overflow-wrap: anywhere; }
+
+/* 카드의 그림과 이름은 통째로 한 단추(누르면 펼치고 접는다) */
+.tile {
+  display: grid; gap: 8px; align-content: start; width: 100%; min-height: 44px; margin: 0; padding: 0; border: 0; border-radius: 10px;
+  background: none; color: inherit; font: inherit; text-align: start; cursor: pointer;
+}
+.pic {
+  position: relative; display: block; aspect-ratio: 2 / 3; overflow: hidden; border-radius: 10px; border: 1px solid var(--line);
+  background: radial-gradient(circle at 50% 35%, var(--paper) 0%, var(--paper-3) 100%);
+}
+.tile:hover .pic { border-color: var(--ink-3); }
+.picImg { display: block; width: 100%; height: 100%; object-fit: contain; }
+.picEmpty {
+  display: grid; place-items: center; height: 100%; padding: 8px; text-align: center; font-size: 0.8em; line-height: 1.35;
+  color: var(--ink-3); background: var(--paper);
+}
+.marks { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; pointer-events: none; }
+.mark {
+  font-size: 0.72em; font-weight: 700; line-height: 1.6; padding: 0 7px; border-radius: 999px; border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 90%, transparent); color: var(--ink);
+}
+.caption { display: grid; gap: 4px; align-content: start; min-width: 0; padding: 0 2px 2px; }
+.tileName {
+  font-weight: 800; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+}
+.tileTags { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; min-width: 0; }
+.tileState { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font-size: 0.86em; }
+
+/* 3D 모형 보기의 사진: 찍기 전에는 2D 그림을 흐리게, 못 찍으면 2D 그림에 「3D」 표시(위 왼쪽의 ★·입고 있음과 겹치지 않게 아래 오른쪽) */
+.snap { position: relative; display: block; width: 100%; height: 100%; }
+.snap[data-state="wait"] .picImg { opacity: 0.45; }
+.snapNote {
+  position: absolute; left: 6px; right: 6px; bottom: 6px; padding: 1px 6px; border-radius: 999px; text-align: center;
+  font-size: 0.72em; font-weight: 700; background: color-mix(in srgb, var(--paper) 90%, transparent); color: var(--ink-2);
+}
+.snapMark {
+  position: absolute; right: 6px; bottom: 6px; padding: 0 8px; border-radius: 999px; font-size: 0.74em; font-weight: 800; line-height: 1.6;
+  background: var(--ink); color: var(--paper);
+}
+
+.role { font-size: 0.74em; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--paper-3); color: var(--ink-2); }
+.role[data-role="admin"] { background: var(--pine); color: var(--pine-on); }
+.role[data-role="family"] { background: var(--season-soft); color: var(--ink); }
+.tag {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.74em; padding: 1px 8px; border-radius: 999px; border: 1px dashed var(--line-2); color: var(--ink-2);
+}
+.meta { margin: 0; font-size: 0.82em; color: var(--ink-3); }
+.state { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 0.86em; }
+.badge { font-size: 0.86em; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: var(--paper-3); color: var(--ink-2); }
+.badge[data-tone="ok"] { background: color-mix(in srgb, var(--pine) 16%, var(--paper)); color: var(--pine); }
+.badge[data-tone="busy"] { background: color-mix(in srgb, var(--lamp) 22%, var(--paper)); color: var(--ink); }
+.badge[data-tone="warn"] { background: color-mix(in srgb, var(--warn) 14%, var(--paper)); color: var(--warn); }
+.why { color: var(--ink-2); }
+.facts { flex-basis: 100%; font-size: 0.92em; color: var(--ink-3); }
+.facts:empty { display: none; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask {
+  display: grid; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--paper);
+}
+.ask:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.askText { margin: 0; font-weight: 700; line-height: 1.6; }
+.note { margin: 0; font-size: 0.9em; color: var(--warn); }
+.note[data-ok] { color: var(--pine); }
+.more { margin: 0; text-align: center; }
+
+/* 3D 보기. 무대 위에서 위아래로 밀면 페이지가 스크롤된다(좌우로 끌면 돌리기). 무대가 화면의 큰 몫을 차지해도 아래 단추로 내려갈 수 있게 */
+.preview { display: grid; gap: 8px; }
+.stage {
+  position: relative; height: min(340px, 62vh); border-radius: 12px; border: 1px solid var(--line); overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, var(--paper) 0%, var(--paper-3) 100%); touch-action: pan-y; cursor: grab;
+}
+.stage:active { cursor: grabbing; }
+.previewCanvas { display: block; width: 100%; height: 100%; }
+.previewNote { margin: 0; font-size: 0.84em; color: var(--ink-3); }
+
+/* 조작 기록 */
+.log { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.logTitle { margin: 0; font-size: 1em; }
+.logList { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.logList li { display: grid; gap: 2px; padding: 10px 12px; border-radius: 10px; background: var(--paper-2); border: 1px solid var(--line); font-size: 0.9em; }
+.logWhen { font-size: 0.86em; color: var(--ink-3); }
+.logWhat { color: var(--ink-2); }
+
+@media (min-width: 600px) {
+  .list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 720px) {
+  .views { width: min(100%, 440px); }
+  .tools { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; }
+  .chips { grid-column: 1 / -1; flex-wrap: wrap; overflow: visible; }
+}
+@media (min-width: 860px) {
+  .list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .list { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+:global(:root[data-theme="dark"]) .view[aria-pressed="true"] { background: color-mix(in srgb, var(--ink) 14%, var(--paper-3)); }
+:global(:root[data-theme="light"]) .view[aria-pressed="true"] { background: var(--paper); }

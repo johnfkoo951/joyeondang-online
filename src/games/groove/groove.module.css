@@ -1,0 +1,298 @@
+.root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(12px, 2.5vw, 24px);
+  box-sizing: border-box;
+  color: var(--ink, #231f1b);
+  background: radial-gradient(circle at 50% 18%, rgba(235, 184, 98, 0.2), transparent 62%), var(--paper, #fbf7ef);
+  user-select: none;
+  overflow-y: auto;
+}
+.root[data-theme='dark'] {
+  color: #f4ede2;
+  background: radial-gradient(circle at 50% 18%, rgba(226, 134, 94, 0.22), transparent 60%), #18161a;
+}
+
+.topBar {
+  width: min(760px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stagePills {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.stagePill {
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1.5px solid rgba(128, 115, 98, 0.35);
+  opacity: 0.72;
+}
+.stagePill[data-active] {
+  opacity: 1;
+  border-color: #c96442;
+  background: rgba(201, 100, 66, 0.16);
+}
+.stagePill[data-done] {
+  opacity: 1;
+  border-color: #3e6b4f;
+  background: rgba(62, 107, 79, 0.18);
+}
+
+.card {
+  width: min(720px, 100%);
+  border-radius: 20px;
+  padding: clamp(18px, 3vw, 28px);
+  background: rgba(255, 252, 245, 0.88);
+  border: 1.5px solid rgba(120, 104, 86, 0.24);
+  box-shadow: 0 12px 32px rgba(28, 22, 16, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.root[data-theme='dark'] .card {
+  background: rgba(34, 31, 38, 0.92);
+  border-color: rgba(240, 228, 210, 0.16);
+}
+
+.stageGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.stageBtn {
+  text-align: left;
+  padding: 13px 15px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(120, 104, 86, 0.28);
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.root[data-theme='dark'] .stageBtn {
+  background: rgba(255, 255, 255, 0.05);
+}
+.stageBtn:hover {
+  transform: translateY(-2px);
+  border-color: #c96442;
+}
+.stageBtnTitle {
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.stageBtnSub {
+  margin-top: 4px;
+  font-size: 12.5px;
+  opacity: 0.82;
+  line-height: 1.4;
+}
+
+.arena {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.trioStage {
+  width: 100%;
+  min-height: 210px;
+  border-radius: 22px;
+  padding: 20px 16px 16px;
+  background: linear-gradient(180deg, rgba(46, 38, 56, 0.94), rgba(26, 22, 32, 0.97));
+  color: #fbf5e9;
+  border: 2px solid rgba(232, 184, 109, 0.35);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: end;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ribbonGlow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 25%, rgba(111, 143, 202, 0.28), transparent 52%),
+    radial-gradient(ellipse at 50% 20%, rgba(233, 133, 162, 0.24), transparent 52%),
+    radial-gradient(ellipse at 82% 25%, rgba(242, 196, 90, 0.28), transparent 52%);
+  pointer-events: none;
+}
+
+.musician {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.09s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.musician[data-pop='true'] {
+  transform: translateY(-12px) scale(1.06);
+}
+
+.bubble {
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #fff8eb;
+  color: #241c16;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.08s ease, transform 0.08s ease;
+}
+.bubble[data-show='true'] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.avatarCircle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  border: 3px solid rgba(255, 248, 232, 0.45);
+  background: rgba(255, 255, 255, 0.1);
+}
+.musician[data-me='true'] .avatarCircle {
+  border-color: #f5c85b;
+  background: rgba(245, 200, 91, 0.22);
+}
+
+.roleLabel {
+  font-size: 12.5px;
+  font-weight: 600;
+  opacity: 0.88;
+}
+
+.grooveBarWrap {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.needleTrack {
+  width: min(420px, 92%);
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(128, 116, 100, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+.needleCenter {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transform: translateX(-50%);
+  background: #3e6b4f;
+}
+.needleDot {
+  position: absolute;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d9643a;
+  transform: translateX(-50%);
+  transition: left 0.08s ease-out;
+}
+
+.verdictRow {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 16px;
+}
+.verdictPocket { color: #2f855a; }
+.verdictGood { color: #c97a2b; }
+.verdictOff { color: #b85c38; }
+.verdictMiss { color: #b83b3b; }
+
+.hitPad {
+  width: min(440px, 100%);
+  min-height: 76px;
+  border-radius: 18px;
+  border: 2.5px solid #c96442;
+  background: linear-gradient(180deg, #de734e, #be5432);
+  color: #fffaf2;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(190, 84, 50, 0.3);
+  transition: transform 0.05s ease;
+}
+.hitPad:active {
+  transform: scale(0.97);
+}
+
+.gradeBadge {
+  display: inline-block;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+.gradeSUPERB {
+  background: #f5c85b;
+  color: #241909;
+}
+.gradeOK {
+  background: #4b8362;
+  color: #f7fbf8;
+}
+.gradeTRY_AGAIN {
+  background: #8d7f73;
+  color: #fff;
+}
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+.statBox {
+  padding: 10px 6px;
+  border-radius: 12px;
+  background: rgba(128, 116, 100, 0.12);
+}
+.statNum {
+  font-size: 20px;
+  font-weight: 800;
+}
+.statLbl {
+  font-size: 12px;
+  opacity: 0.78;
+}

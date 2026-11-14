@@ -2,7 +2,8 @@
 // 순수 함수만 둔다. 저장소는 인자로 받아 시험에서 가짜 저장소로 부른다(이 파일은 타입만 가져온다).
 import type { Level } from '@/walk/types';
 
-export const POS_KEY = (kind: string) => `jy.walk.pos.v1.${kind}`;
+// v2(2026-11-10): 실제 집을 넓혀 좌표가 바뀌었다. 옛 자리는 버린다
+export const POS_KEY = (kind: string) => `jy.walk.pos.v2.${kind}`;
 export const ROOM_KEY = 'jy.walk.room.v1';
 export const STAMPED_KEY = 'jy.walk.stamped.v1'; // gitleaks:allow (localStorage 키 이름, 비밀값 아님)
 /** 이만큼 지난 기억은 버린다 */
@@ -105,17 +106,24 @@ export function withRo(word: string): string {
   return `${word}로`;
 }
 
-/** 걸린 시간: 「42초」, 「1분 5초」 */
-export function formatMs(ms: number): string {
+/** 걸린 시간: 「42초」, 「1분 5초」. 영어면 「42 sec」, 「1 min 5 sec」 */
+export function formatMs(ms: number, lang: 'ko' | 'en' = 'ko'): string {
   const s = Math.max(0, Math.round(ms / 1000));
-  if (s < 60) return `${s}초`;
+  const en = lang === 'en';
+  if (s < 60) return en ? `${s} sec` : `${s}초`;
   const m = Math.floor(s / 60);
   const r = s % 60;
+  if (en) return r ? `${m} min ${r} sec` : `${m} min`;
   return r ? `${m}분 ${r}초` : `${m}분`;
 }
 
-/** 대략 걸리는 시간: 「1분 안팎」, 「30초 안팎」 */
-export function aboutSeconds(sec: number): string {
-  if (sec < 60) return `${Math.max(10, Math.round(sec / 10) * 10)}초 안팎`;
-  return `${Math.round(sec / 60)}분 안팎`;
+/** 대략 걸리는 시간: 「1분 안팎」, 「30초 안팎」. 영어면 「About 1 min」, 「About 30 sec」 */
+export function aboutSeconds(sec: number, lang: 'ko' | 'en' = 'ko'): string {
+  const en = lang === 'en';
+  if (sec < 60) {
+    const s = Math.max(10, Math.round(sec / 10) * 10);
+    return en ? `About ${s} sec` : `${s}초 안팎`;
+  }
+  const m = Math.round(sec / 60);
+  return en ? `About ${m} min` : `${m}분 안팎`;
 }

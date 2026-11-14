@@ -1,0 +1,25 @@
+/* 관리자 지도 고르기: 위 단추 줄 아래 왼쪽의 작은 두 칸 단추와 한 줄 알림. 색은 사이트 토큰만.
+   자리 자체는 누르기를 받지 않고(빈 곳으로 둘러보기가 그대로 된다) 단추와 알림만 받는다. 사진 캐릭터 칩 자리(z 3)보다 아래 */
+.pick {
+  position: absolute; left: var(--walk-left); top: calc(var(--walk-bar, calc(var(--walk-top) + 44px)) + 10px); z-index: 2;
+  display: grid; justify-items: start; gap: 6px; max-width: calc(100% - var(--walk-left) - var(--walk-right)); pointer-events: none;
+}
+.pick > * { pointer-events: auto; }
+.row {
+  display: inline-flex; gap: 2px; padding: 3px; border-radius: 12px;
+  background: var(--walk-surface); border: 1px solid var(--walk-edge); box-shadow: var(--walk-shadow); backdrop-filter: blur(10px);
+}
+.opt {
+  min-height: 36px; padding: 0 12px; border: 0; border-radius: 9px; font: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer;
+  color: var(--ink-2); background: transparent; white-space: nowrap; touch-action: manipulation;
+}
+.opt:hover:not(:disabled) { color: var(--ink); background: var(--paper); }
+.opt[aria-pressed="true"] { color: var(--pine-on); background: var(--pine); }
+.opt:disabled { cursor: progress; }
+.opt:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.note {
+  margin: 0; padding: 4px 10px; border-radius: 12px; font-size: 0.82rem; font-weight: 700; line-height: 1.4;
+  color: var(--ink); background: var(--walk-surface); border: 1px solid var(--walk-edge); backdrop-filter: blur(10px);
+}
+/* 손가락 기기: 누르기 좋게 44px */
+:global(.walk-root[data-coarse]) .opt { min-height: 44px; }

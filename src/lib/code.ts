@@ -21,3 +21,16 @@ export function makeCode(groups = 3, size = 4): string {
 export function normalizeCode(raw: string): string {
   return raw.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
 }
+
+export const HANGUL_KEYBOARD_NOTE = '한글 자판으로 들어온 것 같아요. 영문 자판으로 바꿔 다시 적어 주세요.';
+/** 화면이 영어일 때(lib/messages-en이 옮긴다) */
+export const HANGUL_KEYBOARD_NOTE_EN = 'It looks like it was typed with a Korean keyboard. Please switch to English letters and type it again.';
+
+/**
+ * 코드가 모자랄 때 보일 안내(길이가 되면 null). 한글 자판인 채로 치면 정규화에서 글자가 모두 지워져
+ * 「다시 확인」만 나오고 손님은 코드가 틀린 줄 안다: 한글(자모 포함)이 섞여 있으면 자판을 알려 준다.
+ */
+export function shortCodeNote(raw: string, min: number, note: string): string | null {
+  if (normalizeCode(raw).length >= min) return null;
+  return /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(raw) ? HANGUL_KEYBOARD_NOTE : note;
+}

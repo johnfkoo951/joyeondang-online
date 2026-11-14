@@ -592,7 +592,27 @@
 @media (max-width: 600px) {
   .cell {
     aspect-ratio: auto;
-    min-height: 32px;
+    min-height: 36px;
+  }
+  /* 붙박이 막대는 단추 넷을 한 줄로(두 줄이면 격자를 150px쯤 가린다). 이름은 그대로 두고 낱말 단위로 두 줄까지 */
+  .dock .actions {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+  .dock .btn,
+  .dock .primary {
+    min-width: 0;
+    padding: 0 6px;
+    font-size: 0.82em;
+    line-height: 1.2;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  .dock .primary svg {
+    width: 20px;
+    height: 20px;
   }
 }
 

@@ -61,6 +61,24 @@ export const ROUNDS: readonly RoundSpec[] = [
   { bpm: 108, phrases: 7, hits: [3, 5], offbeats: [1, 2], adjacent: true, win: { good: 0.07, ok: 0.14 } },
 ];
 
+/**
+ * 손가락 기기(휴대폰·태블릿)는 판정 창을 조금 넓힌다(화면을 누르는 손은 키보드보다 들쭉날쭉하다).
+ * 엇박이 있는 판은 가장 가까운 두 자리(엇박 → 다음 박)를 헷갈리지 않게 ok 창을 그 간격의 0.9배 안에 둔다.
+ */
+export const COARSE_WIDEN = 1.25;
+export function judgeWindow(spec: RoundSpec, coarse = false): JudgeWindow {
+  if (!coarse) return spec.win;
+  let ok = spec.win.ok * COARSE_WIDEN;
+  if (spec.adjacent || spec.offbeats[1] > 0) ok = Math.min(ok, (slotTime(2, spec.bpm) - slotTime(1, spec.bpm)) * 0.9);
+  return { good: Math.min(spec.win.good * COARSE_WIDEN, ok * 0.6), ok };
+}
+
+/** 도장(마침)은 1판만 넘으면 받는다. 2·3판은 덤(점수와 두 마디 만들기로 가는 길) */
+export const CLEAR_ROUNDS = 1;
+export function isCleared(passed: readonly boolean[]): boolean {
+  return passed.length >= CLEAR_ROUNDS && passed.slice(0, CLEAR_ROUNDS).every(Boolean);
+}
+
 /** 판 하나의 씨앗(같은 방문 씨앗·판·시도면 같은 판) */
 export function roundSeed(seed: number, round: number, attempt = 0): number {
   return (seed + Math.imul(round + 1, 0x9e3779b1) + Math.imul(attempt, 104729)) >>> 0;
@@ -381,6 +399,8 @@ export const GRID_CELLS = 16;
 /** F 블루스 음계(낮은 파부터): 파 라♭ 시♭ 시 도 미♭ 높은 파 */
 export const SCALE = [65, 68, 70, 71, 72, 75, 77] as const;
 export const SCALE_NAMES = ['파', '라♭', '시♭', '시', '도', '미♭', '높은 파'] as const;
+/** 영어 화면의 음 이름(같은 차례) */
+export const SCALE_NAMES_EN = ['F', 'A♭', 'B♭', 'B', 'C', 'E♭', 'high F'] as const;
 /** 칸마다 음 하나(SCALE 번호) 또는 쉼(null) */
 export type Grid = Array<number | null>;
 

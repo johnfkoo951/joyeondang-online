@@ -41,7 +41,8 @@
   padding: 8px 16px; background: var(--paper); border-bottom: 1px solid var(--line);
 }
 .barTitle { margin: 0; display: flex; align-items: baseline; gap: 10px; min-width: 0; font-weight: 800; }
-.barTitle > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 좁은 화면에서 긴 판 이름은 자르지 않고 두 줄로(두 줄이 단추 높이 44px 안에 든다) */
+.barTitle > span:first-child { min-width: 0; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
 .barCount { flex: none; color: var(--ink-2); font-size: 0.9rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .barBtns { flex: none; display: flex; gap: 8px; }
 .main { max-width: 880px; margin: 0 auto; padding: 16px 16px 48px; }
@@ -97,6 +98,30 @@
 .modeText strong { font-size: 1.12rem; }
 .modeText span { color: var(--ink-2); font-size: 0.92rem; word-break: keep-all; }
 .modeText .modeNote { color: var(--ink-3); font-size: 0.82rem; }
+/* 그림 놀이 단추: 글을 몰라도 알아보게 그림 카드 → 같은 색 서랍 미리보기. 데스크탑에서도 색 테두리로 구분 */
+.modeKids { flex-wrap: wrap; border: 2px solid color-mix(in srgb, var(--roof) 55%, var(--line-2)); background: color-mix(in srgb, var(--roof) 6%, var(--paper-2)); }
+.modePreview { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px; flex: 1 1 100%; }
+.previewPair { display: inline-flex; align-items: center; gap: 2px; }
+.previewCard, .previewDrawer {
+  display: grid; place-items: center; width: 42px; height: 42px; padding: 4px; border-radius: 10px;
+  background: var(--paper); border: 2px solid var(--tone);
+}
+.previewDrawer { background: color-mix(in srgb, var(--tone) 18%, var(--paper)); }
+.previewArrow { color: var(--ink-3); }
+.previewArrow .icon { width: 18px; height: 18px; }
+.previewGo { display: none; }
+/* 손가락 기기: 그림 놀이가 먼저, 크게(그림·▶ 단추만 보고도 누르게) */
+.home[data-kids-first] .modes { grid-template-columns: 1fr; }
+.home[data-kids-first] .modeKids { min-height: 200px; padding: 18px; gap: 12px 14px; }
+.home[data-kids-first] .modeKids .modeIcon { width: 64px; height: 64px; }
+.home[data-kids-first] .modeKids .modeText strong { font-size: 1.3rem; }
+.home[data-kids-first] .previewCard,
+.home[data-kids-first] .previewDrawer { width: 56px; height: 56px; }
+.home[data-kids-first] .previewGo {
+  display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%;
+  background: var(--roof); color: var(--roof-on);
+}
+.home[data-kids-first] .previewGo .icon { width: 28px; height: 28px; fill: currentColor; }
 .guide { padding: 10px 14px; border-radius: var(--radius); border: 1px solid var(--line); }
 .guide summary { min-height: 32px; padding-top: 4px; font-weight: 700; cursor: pointer; }
 .guideList { display: grid; gap: 8px; margin: 10px 0 0; padding: 0; list-style: none; }
@@ -142,10 +167,16 @@
 .wordCard[data-drag] { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
 .wordCard[data-state='right'] { border-color: var(--pine); }
 .wordCard[data-state='wrong'] { border-color: var(--warn); }
-.cardKicker { display: block; color: var(--ink-3); font-size: 0.78rem; font-weight: 700; }
+.cardKicker { display: block; color: var(--ink-3); font-size: 0.8rem; font-weight: 700; }
 .cardLabel { margin: 4px 0 0; font-size: 1.6rem; font-weight: 800; line-height: 1.3; word-break: keep-all; }
 .cardLabel:focus { outline: none; }
-.feedback { min-height: 3em; }
+/* 풀이는 서랍 아래. 화면이 낮으면 아래에 붙어 「다음」이 늘 보인다(붙을 자리가 서랍까지 닿게 .board로 함께 묶는다) */
+.prompt[data-off] { visibility: hidden; }
+.board { min-width: 0; }
+/* 화면 아래의 안전 영역은 놀이 칸(.game-stage-inner)이 이미 비워 둔다 */
+.feedback { position: sticky; bottom: 0; z-index: 3; margin-top: 14px; padding-bottom: 10px; }
+.feedback:empty { margin-top: 0; padding-bottom: 0; }
+.feedback .answer { box-shadow: var(--lift); }
 .drawerGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .drawer {
   position: relative; display: grid; align-content: start; gap: 2px; min-width: 0; min-height: 96px;
@@ -156,7 +187,7 @@
 .drawer:disabled { cursor: default; }
 .dCode { color: color-mix(in srgb, var(--tone) 65%, var(--ink)); font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .dName { font-size: 1rem; font-weight: 800; word-break: keep-all; }
-.dHint { color: var(--ink-2); font-size: 0.74rem; line-height: 1.35; word-break: keep-all; }
+.dHint { color: var(--ink-2); font-size: 0.8rem; line-height: 1.35; word-break: keep-all; }
 .dHandle {
   position: absolute; left: 50%; bottom: 7px; width: 28px; height: 5px; margin-left: -14px;
   border-radius: 3px; background: color-mix(in srgb, var(--tone) 55%, var(--ink));

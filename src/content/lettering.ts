@@ -1,0 +1,217 @@
+// Curated public artwork catalog. Original files and provenance stay outside the public bundle.
+export type LetteringGroup = 'plaque' | 'easel' | 'desk' | 'hanji';
+export type LetteringWork = {
+  number: number; slug: string; title: string; group: LetteringGroup;
+  description: string; direction: string; src: string; thumb: string;
+  width: number; height: number; thumbWidth: number;
+};
+export const LETTERING_WORKS: readonly LetteringWork[] = [
+  {
+    "number": 1,
+    "slug": "ink-gold",
+    "title": "먹빛 금자",
+    "group": "plaque",
+    "description": "먹색 바탕에 금빛 획을 얹은 전통형 현판.",
+    "direction": "오른쪽부터 조연당",
+    "src": "/web/lettering/01-ink-gold.webp",
+    "thumb": "/web/lettering/01-ink-gold-small.webp",
+    "width": 1672,
+    "height": 557,
+    "thumbWidth": 640
+  },
+  {
+    "number": 2,
+    "slug": "wood-calligraphy",
+    "title": "나무 위의 획",
+    "group": "plaque",
+    "description": "나무색 바탕에 검은 획. 작은 造 표식은 당호 장식이에요.",
+    "direction": "오른쪽부터 조연당",
+    "src": "/web/lettering/02-wood-calligraphy.webp",
+    "thumb": "/web/lettering/02-wood-calligraphy-small.webp",
+    "width": 1672,
+    "height": 585,
+    "thumbWidth": 640
+  },
+  {
+    "number": 3,
+    "slug": "porcelain",
+    "title": "백자의 여백",
+    "group": "plaque",
+    "description": "밝은 판과 정제된 한자, 넓은 여백.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/03-porcelain.webp",
+    "thumb": "/web/lettering/03-porcelain-small.webp",
+    "width": 1672,
+    "height": 557,
+    "thumbWidth": 640
+  },
+  {
+    "number": 4,
+    "slug": "green-korean",
+    "title": "초록의 집",
+    "group": "plaque",
+    "description": "초록 바탕에 멀리서도 읽기 쉬운 한글 이름.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/04-green-korean.webp",
+    "thumb": "/web/lettering/04-green-korean-small.webp",
+    "width": 1672,
+    "height": 597,
+    "thumbWidth": 640
+  },
+  {
+    "number": 5,
+    "slug": "crayon-plaque",
+    "title": "세 가지 색의 이름",
+    "group": "plaque",
+    "description": "분홍·초록·파랑 손글씨와 크레용 집의 만남.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/05-crayon-plaque.webp",
+    "thumb": "/web/lettering/05-crayon-plaque-small.webp",
+    "width": 1672,
+    "height": 669,
+    "thumbWidth": 640
+  },
+  {
+    "number": 6,
+    "slug": "hanji-easel",
+    "title": "세로로 맞이하는 집",
+    "group": "easel",
+    "description": "한지색 바탕과 세로 서체. 작은 造 표식은 당호 장식이에요.",
+    "direction": "위에서 아래로 조연당",
+    "src": "/web/lettering/06-hanji-easel.webp",
+    "thumb": "/web/lettering/06-hanji-easel-small.webp",
+    "width": 1131,
+    "height": 1600,
+    "thumbWidth": 565
+  },
+  {
+    "number": 7,
+    "slug": "gallery-easel",
+    "title": "조연당 갤러리",
+    "group": "easel",
+    "description": "큰 한글과 비대칭 여백으로 맞이하는 안내판.",
+    "direction": "위에서 아래로 조연당",
+    "src": "/web/lettering/07-gallery-easel.webp",
+    "thumb": "/web/lettering/07-gallery-easel-small.webp",
+    "width": 1131,
+    "height": 1600,
+    "thumbWidth": 565
+  },
+  {
+    "number": 8,
+    "slug": "storybook-easel",
+    "title": "그림 속으로 오세요",
+    "group": "easel",
+    "description": "손글씨와 크레용 집을 크게 펼친 환영판.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/08-storybook-easel.webp",
+    "thumb": "/web/lettering/08-storybook-easel-small.webp",
+    "width": 1131,
+    "height": 1600,
+    "thumbWidth": 565
+  },
+  {
+    "number": 9,
+    "slug": "color-hanja-easel",
+    "title": "짓고 잇는 세 글자",
+    "group": "easel",
+    "description": "세 가지 색의 한자와 작은 집 그림.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/09-color-hanja-easel.webp",
+    "thumb": "/web/lettering/09-color-hanja-easel-small.webp",
+    "width": 1131,
+    "height": 1600,
+    "thumbWidth": 565
+  },
+  {
+    "number": 10,
+    "slug": "ink-desk",
+    "title": "작은 먹빛",
+    "group": "desk",
+    "description": "전통 현판의 색과 획을 작은 안내판으로.",
+    "direction": "오른쪽부터 조연당",
+    "src": "/web/lettering/10-ink-desk.webp",
+    "thumb": "/web/lettering/10-ink-desk-small.webp",
+    "width": 1672,
+    "height": 936,
+    "thumbWidth": 640
+  },
+  {
+    "number": 11,
+    "slug": "gallery-desk",
+    "title": "작은 갤러리",
+    "group": "desk",
+    "description": "무채색 판 위에 이름과 안내를 나란히.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/11-gallery-desk.webp",
+    "thumb": "/web/lettering/11-gallery-desk-small.webp",
+    "width": 1672,
+    "height": 936,
+    "thumbWidth": 640
+  },
+  {
+    "number": 12,
+    "slug": "crayon-desk",
+    "title": "작은 그림 집",
+    "group": "desk",
+    "description": "손글씨와 집 그림이 함께 인사하는 탁상 안내판.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/12-crayon-desk.webp",
+    "thumb": "/web/lettering/12-crayon-desk-small.webp",
+    "width": 1672,
+    "height": 1204,
+    "thumbWidth": 640
+  },
+  {
+    "number": 13,
+    "slug": "hanji-kaishu-horizontal",
+    "title": "한지 위의 굳센 획",
+    "group": "hanji",
+    "description": "두껍고 힘 있는 먹 획, 한지 위에 남은 붓의 결.",
+    "direction": "오른쪽부터 조연당",
+    "src": "/web/lettering/13-hanji-kaishu-horizontal.webp",
+    "thumb": "/web/lettering/13-hanji-kaishu-horizontal-small.webp",
+    "width": 1672,
+    "height": 941,
+    "thumbWidth": 640
+  },
+  {
+    "number": 14,
+    "slug": "hanji-running-horizontal",
+    "title": "바람을 닮은 행서",
+    "group": "hanji",
+    "description": "이어지는 획과 마른 붓의 흔적, 글자 사이로 흐르는 여백.",
+    "direction": "오른쪽부터 조연당",
+    "src": "/web/lettering/14-hanji-running-horizontal.webp",
+    "thumb": "/web/lettering/14-hanji-running-horizontal-small.webp",
+    "width": 1672,
+    "height": 941,
+    "thumbWidth": 640
+  },
+  {
+    "number": 15,
+    "slug": "hanji-vertical",
+    "title": "세로로 쓴 조연당",
+    "group": "hanji",
+    "description": "造, 連, 堂을 한 줄로 내려 쓴 세로 작품.",
+    "direction": "위에서 아래로 조연당",
+    "src": "/web/lettering/15-hanji-vertical.webp",
+    "thumb": "/web/lettering/15-hanji-vertical-small.webp",
+    "width": 1086,
+    "height": 1448,
+    "thumbWidth": 600
+  },
+  {
+    "number": 16,
+    "slug": "hanji-korean",
+    "title": "한글로 맞이하는 집",
+    "group": "hanji",
+    "description": "익숙한 한글 세 글자를 부드러운 먹빛으로.",
+    "direction": "왼쪽부터 조연당",
+    "src": "/web/lettering/16-hanji-korean.webp",
+    "thumb": "/web/lettering/16-hanji-korean-small.webp",
+    "width": 1254,
+    "height": 1254,
+    "thumbWidth": 640
+  }
+];

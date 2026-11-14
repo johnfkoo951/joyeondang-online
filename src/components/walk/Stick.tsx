@@ -31,6 +31,24 @@ export function Stick({ onChange, label, tone }: Props) {
   });
   // 스틱이 사라질 때(지도·패널이 열릴 때) 눌린 채로 남지 않게
   useEffect(() => () => report.current(0, 0), []);
+  // 창이 초점을 잃거나 화면이 가려지면(전화·알림·앱 전환) 손을 뗀 신호가 안 올 수 있다: 스스로 놓는다
+  useEffect(() => {
+    const release = () => {
+      if (active.current === null) return;
+      active.current = null;
+      setKnob({ x: 0, y: 0 });
+      report.current(0, 0);
+    };
+    const onHide = () => { if (document.hidden) release(); };
+    window.addEventListener('blur', release);
+    window.addEventListener('pagehide', release);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.removeEventListener('blur', release);
+      window.removeEventListener('pagehide', release);
+      document.removeEventListener('visibilitychange', onHide);
+    };
+  }, []);
 
   const move = (e: React.PointerEvent) => {
     const r = base.current?.getBoundingClientRect();
@@ -59,7 +77,8 @@ export function Stick({ onChange, label, tone }: Props) {
       data-tone={tone}
       data-active={knob.x !== 0 || knob.y !== 0 ? 'true' : undefined}
       onPointerDown={(e) => {
-        if (active.current !== null) return; // 이미 다른 손가락이 잡고 있다
+        // 이미 다른 손가락이 잡고 있으면 받지 않는다. 다만 그 손가락이 사라졌는데 놓았다는 신호를 못 받았으면 새 손가락이 이어받는다
+        if (active.current !== null && e.currentTarget.hasPointerCapture(active.current)) return;
         active.current = e.pointerId;
         try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* 거부돼도 계속 */ }
         e.preventDefault();

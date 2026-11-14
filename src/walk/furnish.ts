@@ -3,10 +3,13 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { EXTERIOR, FLOOR1, FLOOR2 } from '@/content/interior';
 import { TOY_SHELF, type ToyShape } from '@/content/room-worlds';
 import type { Furniture } from './types';
+import { ROOM_UPGRADE_PIECES } from './furnish-rooms';
 
 /** 집마다 다른 높이: 2층 바닥 높이, 가구 자리의 천장 높이(층 바닥 기준) */
 export type FurnishEnv = { floor2: number; ceilingAt: (f: Furniture) => number };
-import { hanji, planks, rug } from './textures';
+import { hanji, planks, releaseCanvas, rug } from './textures';
+import { createSurfaceAssets, SURFACE_ASSETS } from './generated-surfaces';
+import { walkLang, type Lang } from './lang';
 
 // 가구는 모두 상자·원기둥 같은 단순한 도형으로 짓는다. 레퍼런스를 받으면 모양과 색을 여기서 다듬는다.
 
@@ -19,7 +22,8 @@ const std = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters>
  * 처음 쓸 때 만들어 두는 재질·텍스처 묶음(방 장면 소품용). 같은 열쇠면 같은 것을 돌려주고,
  * 장면이 정리될 때(scene.ts가 makeFurnitureMats의 값마다 dispose) 만든 것을 모두 놓는다.
  */
-function makeKit() {
+function makeKit(onChange?: () => void) {
+  const surfaces = createSurfaceAssets(onChange);
   const made = new Map<string, { dispose: () => void }>();
   const once = <T extends { dispose: () => void }>(key: string, make: () => T): T => {
     let v = made.get(key) as T | undefined;
@@ -29,35 +33,73 @@ function makeKit() {
     }
     return v;
   };
+  /** 캔버스 텍스처 하나 만들기(그림 파일 없이) */
+  const canvasTex = (w: number, h: number, draw: (g: CanvasRenderingContext2D, w: number, h: number) => void) => {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    draw(c.getContext('2d')!, w, h);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    return t;
+  };
+  /** 글이 든 텍스처(표지판·카드): 그린 말과 다시 그리는 법. 화면 말이 바뀌면 relabel이 같은 캔버스에 다시 그린다 */
+  const worded: Array<{ tex: THREE.CanvasTexture; lang: Lang; draw: (g: CanvasRenderingContext2D, w: number, h: number, lang: Lang) => void }> = [];
   return {
     once,
+    image: surfaces.paint,
     /** 색 하나짜리 재질 */
     paint: (color: string, roughness = 0.8, metalness = 0) => once(`p:${color}:${roughness}:${metalness}`, () => std(color, { roughness, metalness })),
     /** 스스로 빛나는 재질(등갓·화면) */
     glow: (color: string, intensity = 1.2) => once(`g:${color}:${intensity}`, () => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: intensity })),
     /** 캔버스 텍스처(그림 파일 없이) */
     tex: (key: string, w: number, h: number, draw: (g: CanvasRenderingContext2D, w: number, h: number) => void) =>
+      once(`t:${key}`, () => canvasTex(w, h, draw)),
+    /** 글이 든 캔버스 텍스처: 지금 화면 말로 그리고, 말이 바뀌면 relabel이 다시 그린다(같은 열쇠면 처음 것 그대로) */
+    words: (key: string, w: number, h: number, draw: (g: CanvasRenderingContext2D, w: number, h: number, lang: Lang) => void) =>
       once(`t:${key}`, () => {
-        const c = document.createElement('canvas');
-        c.width = w;
-        c.height = h;
-        draw(c.getContext('2d')!, w, h);
-        const t = new THREE.CanvasTexture(c);
-        t.colorSpace = THREE.SRGBColorSpace;
-        t.wrapS = t.wrapT = THREE.RepeatWrapping;
-        t.anisotropy = 4;
+        const lang = walkLang();
+        const t = canvasTex(w, h, (g, cw, ch) => draw(g, cw, ch, lang));
+        worded.push({ tex: t, lang, draw });
         return t;
       }),
+    /** 화면 말이 바뀌었다: 글이 든 텍스처를 지금 말로 다시 그린다. 다시 그린 것이 있으면 true */
+    relabel(): boolean {
+      const lang = walkLang();
+      let changed = false;
+      for (const it of worded) {
+        const c = it.tex.image as HTMLCanvasElement | undefined;
+        const g = c?.getContext?.('2d');
+        if (it.lang === lang || !c || !g || !c.width) continue;
+        it.lang = lang;
+        g.clearRect(0, 0, c.width, c.height);
+        it.draw(g, c.width, c.height, lang);
+        it.tex.needsUpdate = true;
+        changed = true;
+      }
+      return changed;
+    },
     dispose() {
+      surfaces.dispose();
       made.forEach((v) => v.dispose());
+      // 소품 무늬를 그린 2D 캔버스도 바로 비운다
+      made.forEach(releaseCanvas);
       made.clear();
+      worded.length = 0;
     },
   };
 }
 export type FurnitureKit = ReturnType<typeof makeKit>;
 
-export function makeFurnitureMats() {
-  const kit = makeKit();
+export function makeFurnitureMats(onChange?: () => void) {
+  const kit = makeKit(onChange);
+  const woven = (key: string, base: string, border: string) => kit.once(key, () => {
+    const t = rug(base, border);
+    kit.image(t, SURFACE_ASSETS.rug);
+    return t;
+  });
   const hanjiTex = kit.once('t:hanji', () => hanji(FLOOR2.hanji));
   return {
     kit,
@@ -69,8 +111,8 @@ export function makeFurnitureMats() {
     warmGlow: new THREE.MeshStandardMaterial({ color: FLOOR1.warmLight, emissive: FLOOR1.warmLight, emissiveIntensity: 1.4 }),
     paperCard: std(FLOOR1.paperCard, { roughness: 0.95 }),
     books: FLOOR1.books.map((c) => std(c, { roughness: 0.9 })),
-    rug1: new THREE.MeshStandardMaterial({ map: kit.once('t:rug1', () => rug(FLOOR1.rug, FLOOR1.rugBorder)), roughness: 1 }),
-    runner: new THREE.MeshStandardMaterial({ map: kit.once('t:runner', () => rug('#6f3a2c', '#b98a4a')), roughness: 1 }),
+    rug1: new THREE.MeshStandardMaterial({ map: woven('t:rug1', FLOOR1.rug, FLOOR1.rugBorder), roughness: 1 }),
+    runner: new THREE.MeshStandardMaterial({ map: woven('t:runner', '#6f3a2c', '#b98a4a'), roughness: 1 }),
     dark: std('#2a2420', { roughness: 0.6 }),
     lacquer: std(FLOOR2.lacquer, { roughness: 0.22, metalness: 0.1 }),
     silver: std(FLOOR2.silver, { metalness: 0.92, roughness: 0.28 }),
@@ -80,7 +122,8 @@ export function makeFurnitureMats() {
     beam: std(FLOOR2.beam, { roughness: 0.7 }),
     strip: new THREE.MeshStandardMaterial({ color: FLOOR2.lightStrip, emissive: FLOOR2.lightStrip, emissiveIntensity: 1.2 }),
     stone: std(EXTERIOR.stone, { roughness: 0.95 }),
-    pineLeaf: std(EXTERIOR.pineLeaf, { roughness: 0.9, flatShading: true }),
+    // 아래를 보는 면은 해를 못 받고 땅에서 되비친 빛만 받아 거의 검게 뭉친다: 제 색으로 조금 빛나게 해 그늘도 짙은 초록으로 읽히게 한다
+    pineLeaf: std(EXTERIOR.pineLeaf, { roughness: 0.9, flatShading: true, emissive: EXTERIOR.pineLeaf, emissiveIntensity: 0.35 }),
     pineTrunk: std(EXTERIOR.pineTrunk, { roughness: 0.9 }),
     shrub: std(EXTERIOR.shrub, { roughness: 0.9, flatShading: true }),
     lanternGlow: new THREE.MeshStandardMaterial({ color: '#ffd59a', emissive: '#ffb35c', emissiveIntensity: 1.6 }),
@@ -103,12 +146,51 @@ function seeded(seed: number) {
   return () => ((s = (s * 9301 + 49297) % 233280) / 233280);
 }
 
+/** 도형 전체를 꼭짓점 색 한 가지로 칠한다(여러 색을 한 재질·한 기하로 묶을 때) */
+function tinted(g: THREE.BufferGeometry, hex: string): THREE.BufferGeometry {
+  const c = new THREE.Color(hex);
+  const n = g.attributes.position.count;
+  const col = new Float32Array(n * 3);
+  for (let k = 0; k < n; k++) col.set([c.r, c.g, c.b], k * 3);
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+
+/** 소나무 잎 세 단(아래부터): 칠각뿔의 반지름·높이·가운데 높이. 모두 같은 비율로 눌러 놓고 줄기에서 조금 비켜 둔다 */
+export const PINE_LAYERS: ReadonlyArray<readonly [number, number, number]> = [[2.2, 1.3, 2.0], [1.7, 1.1, 2.9], [1.1, 0.9, 3.7]];
+export const PINE_SHAPE = { sides: 7, sy: 0.7, sz: 0.85, ox: 0.15, oz: -0.1 } as const;
+/** 쪽지 끈 길이(m)와 쪽지를 거는 자리(가운데에서 테두리까지 거리의 몫) */
+const WISH_CORD = 0.12;
+const WISH_INSET = 0.9;
+
+/**
+ * 소원 쪽지를 매다는 자리(나무 가운데 기준 x·z, 끈이 달리는 높이 y, 바깥을 보는 각도 a).
+ * 아랫단 잎 밑면의 테두리 바로 안쪽이라 끈이 늘 잎에 닿는다. 예전에는 높이를 잎과 상관없이 골라
+ * 쪽지 절반이 잎 사이 빈 곳에 떠 있었다.
+ */
+export function wishNoteSpots(n = 7, seed = 5): Array<{ x: number; z: number; y: number; a: number }> {
+  const [r, h, cy] = PINE_LAYERS[0];
+  const { sides, sy, sz, ox, oz } = PINE_SHAPE;
+  const rnd = seeded(seed);
+  const edge = (Math.PI * 2) / sides;
+  const out: Array<{ x: number; z: number; y: number; a: number }> = [];
+  for (let i = 0; i < n; i++) {
+    const a = ((i + 0.2 + rnd() * 0.6) / n) * Math.PI * 2;
+    // 칠각형 테두리까지의 거리: 꼭짓점 쪽에서 r, 변 가운데에서 가장 짧다
+    const rim = (r * Math.cos(edge / 2)) / Math.cos((a % edge) - edge / 2);
+    const d = rim * WISH_INSET;
+    out.push({ x: ox + Math.sin(a) * d, z: oz + Math.cos(a) * d * sz, y: cy - (h * sy) / 2, a });
+  }
+  return out;
+}
+
 /**
  * 가구 하나를 지어 그룹으로 돌려준다. 그룹의 원점은 바닥 가운데이고,
  * 로컬 +z가 정면(face)이며 로컬 너비 W는 벽을 따라가는 길이, D는 깊이다.
  */
 function build(f: Furniture, m: FurnitureMats, lights: LightSpec[], env: FurnishEnv): THREE.Object3D {
-  const side = f.face === '+x' || f.face === '-x';
+  // rot이 있으면 face는 보지 않는다: W는 x 폭, D는 z 폭, 그 각도로 돌려 놓는다(대각선 장식)
+  const side = f.rot === undefined && (f.face === '+x' || f.face === '-x');
   const W = side ? f.z2 - f.z1 : f.x2 - f.x1;
   const D = side ? f.x2 - f.x1 : f.z2 - f.z1;
   const g = new THREE.Group();
@@ -225,49 +307,92 @@ function build(f: Furniture, m: FurnitureMats, lights: LightSpec[], env: Furnish
       return g; // 계단 디딤판·난간은 엔진이 경사면 데이터(ramps)에서 그린다
     case 'pine': {
       g.add(cyl(0.16, 0.26, 2.4, m.pineTrunk, 0, 1.2, 0, 8));
-      const layers: Array<[number, number, number]> = [[2.2, 1.3, 2.0], [1.7, 1.1, 2.9], [1.1, 0.9, 3.7]];
-      for (const [r, h, y] of layers) {
-        const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), m.pineLeaf);
-        c.position.set(0.15, y, -0.1);
-        c.scale.set(1, 0.7, 0.85);
-        g.add(c);
+      // Broad cloud-shaped crowns; retained note anchors are tied to real branches below.
+      for (const [radius, height, y] of PINE_LAYERS) {
+        for (let i = 0; i < 3; i++) {
+          const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), m.pineLeaf);
+          crown.scale.set(radius * 0.65, height * 0.32, radius * 0.55);
+          crown.position.set((i - 1) * radius * 0.43 + PINE_SHAPE.ox, y + (i % 2) * 0.15, (i % 2 ? 0.3 : -0.15) + PINE_SHAPE.oz);
+          g.add(crown);
+        }
       }
-      // 쪽지가 걸리는 나무: 종이 몇 장
-      const rnd = seeded(5);
-      for (let i = 0; i < 7; i++) {
-        const a = rnd() * Math.PI * 2;
-        const r = 1.1 + rnd() * 0.6;
-        const p = box(0.14, 0.2, 0.01, m.paperCard, Math.cos(a) * r, 1.75 + rnd() * 0.5, Math.sin(a) * r);
-        p.rotation.y = -a;
-        g.add(p);
+      for (const at of wishNoteSpots()) {
+        const a = new THREE.Vector3(0, 1.7, 0), b = new THREE.Vector3(at.x, at.y, at.z);
+        const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.045, a.distanceTo(b), 6), m.pineTrunk);
+        branch.position.copy(a).add(b).multiplyScalar(0.5);
+        branch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.sub(a).normalize());
+        g.add(branch);
       }
+      // 쪽지가 걸리는 나무: 아랫단 잎 끝에 끈으로 매단 파스텔 종이. 쪽지와 끈을 한 기하(꼭짓점 색)로 묶어
+      // 꽃 재질과 함께 한 번에 그린다(흰 네모가 하늘에 뜬 것처럼 보이지 않게 색과 끈을 준다)
+      const parts: THREE.BufferGeometry[] = [];
+      wishNoteSpots().forEach((s, i) => {
+        const note = new THREE.BoxGeometry(0.14, 0.2, 0.01).translate(0, -0.1, 0).rotateZ(i % 2 ? 0.15 : -0.15).rotateY(s.a).translate(s.x, s.y - WISH_CORD, s.z);
+        const cord = new THREE.BoxGeometry(0.008, WISH_CORD + 0.02, 0.008).translate(s.x, s.y - WISH_CORD / 2 + 0.01, s.z);
+        parts.push(tinted(note, WISH_PAPER[i % WISH_PAPER.length]), tinted(cord, '#8a6f52'));
+      });
+      const notes = mergeGeometries(parts, false);
+      parts.forEach((p) => p.dispose());
+      if (notes) g.add(new THREE.Mesh(notes, bloomMat(m.kit)));
       break;
     }
     case 'stoneLantern': {
-      g.add(box(0.8, 0.18, 0.8, m.stone, 0, 0.09, 0));
-      g.add(box(0.3, 0.9, 0.3, m.stone, 0, 0.63, 0));
-      g.add(box(0.62, 0.1, 0.62, m.stone, 0, 1.13, 0));
-      g.add(box(0.5, 0.42, 0.5, m.stone, 0, 1.39, 0));
-      g.add(box(0.22, 0.2, 0.52, m.lanternGlow, 0, 1.4, 0));
-      g.add(box(0.52, 0.2, 0.22, m.lanternGlow, 0, 1.4, 0));
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.58, 0.36, 4), m.stone);
-      cap.position.y = 1.78;
-      cap.rotation.y = Math.PI / 4;
-      g.add(cap);
-      g.add(new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), m.stone).translateY(2.0));
-      addLight('#ffb35c', 6, 6, 0, 1.4, 0);
+      // Contemporary stone light-sculpture: same footprint and existing interaction.
+      const chalk = m.kit.paint('#d8d2c4', 0.94);
+      g.add(box(0.8, 0.18, 0.8, chalk, 0, 0.09, 0));
+      const shape = new THREE.Shape();
+      shape.moveTo(-0.31, 0.18); shape.lineTo(-0.31, 1.15);
+      shape.bezierCurveTo(-0.31, 1.9, 0.32, 2.0, 0.34, 1.48);
+      shape.lineTo(0.34, 0.18); shape.lineTo(0.17, 0.18); shape.lineTo(0.17, 1.16);
+      shape.bezierCurveTo(0.16, 1.53, -0.1, 1.43, -0.11, 1.05);
+      shape.lineTo(-0.11, 0.18); shape.closePath();
+      const arch = new THREE.ExtrudeGeometry(shape, { depth: 0.24, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.035, bevelThickness: 0.035, curveSegments: 12 });
+      arch.translate(0, 0, -0.12); g.add(new THREE.Mesh(arch, chalk));
+      g.add(new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 12), m.kit.paint('#ba7950', 0.88)).translateY(0.39));
+      g.add(box(0.035, 0.48, 0.045, m.lanternGlow, -0.1, 0.9, 0.13));
+      addLight('#ffcf9e', 4, 5, 0, 0.9, 0);
       break;
     }
     case 'shrub': {
-      const s = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 0), m.shrub);
+      // 둥글게 다듬은 관목(면을 한 번 더 나누고 조금 울퉁불퉁하게)과 위에 핀 철쭉 몇 송이
+      const geo = new THREE.IcosahedronGeometry(0.7, 1);
+      const p = geo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) {
+        const k = 1 + 0.07 * Math.sin(p.getX(i) * 9.1 + p.getZ(i) * 5.3) + 0.05 * Math.sin(p.getY(i) * 11.7);
+        p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k);
+      }
+      geo.computeVertexNormals();
+      const s = new THREE.Mesh(geo, m.shrub);
       s.position.y = 0.5;
       s.scale.set(W / 1.2, 0.75, D / 1.2);
       g.add(s);
+      const rnd = seeded(spotHash(f) + 5);
+      const pts: Array<[number, number, number]> = [];
+      for (let i = 0; i < 5; i++) {
+        const a = rnd() * Math.PI * 2, r = 0.25 + rnd() * 0.25;
+        pts.push([Math.cos(a) * r * (W / 1.2), 0.62 + rnd() * 0.22, Math.sin(a) * r * (D / 1.2)]);
+      }
+      // 관목 꽃은 멀리서 보는 작은 송이라 면을 덜 나눈 공으로(관목마다 삼각형 수백 개 안쪽)
+      g.add(bloomCluster(m.kit, pts, spotHash(f) + 17, 0.07, 4, 0));
       break;
     }
     case 'path': {
-      for (let z = f.z1 + 0.5; z < f.z2; z += 1.15) {
-        const st = cyl(0.42, 0.45, 0.06, m.stone, (Math.sin(z * 1.7) * 0.18), 0.03, z - (f.z1 + f.z2) / 2, 10);
+      // 디딤돌: 둥근 판 대신 가장자리가 고르지 않은 넓적한 돌(크기·방향을 조금씩 달리해 손으로 놓은 듯하게)
+      for (let z = f.z1 + 0.5, i = 0; z < f.z2; z += 1.15, i++) {
+        const r = 0.36 + ((i * 37) % 7) * 0.012;
+        const geo = new THREE.CylinderGeometry(r, r * 1.04, 0.07, 9);
+        const p = geo.attributes.position as THREE.BufferAttribute;
+        const ph = i * 1.9;
+        for (let k = 0; k < p.count; k++) {
+          const a = Math.atan2(p.getZ(k), p.getX(k));
+          const j = 1 + 0.12 * Math.sin(3 * a + ph) + 0.07 * Math.sin(5 * a + ph * 1.7);
+          p.setX(k, p.getX(k) * j * 1.12);
+          p.setZ(k, p.getZ(k) * j * 0.9);
+        }
+        geo.computeVertexNormals();
+        const st = new THREE.Mesh(geo, m.stone);
+        st.position.set(Math.sin(z * 1.7) * 0.18, 0.025, z - (f.z1 + f.z2) / 2);
+        st.rotation.y = i * 0.7;
         g.add(st);
       }
       break;
@@ -301,15 +426,26 @@ function build(f: Furniture, m: FurnitureMats, lights: LightSpec[], env: Furnish
       break;
     }
     case 'foldingScreen': {
-      // 병풍: 여섯 폭이 지그재그로 선다(폭마다 빈 한지)
+      // 한 그림을 여섯 폭에 이어 붙인다. 뒷면·틀은 기존 한지와 은빛 마감을 유지한다.
       const n = 6;
       const pw = W / n;
+      const map = m.kit.once('t:screenInk', () => {
+        const t = hanji(FLOOR2.hanji);
+        m.kit.image(t, SURFACE_ASSETS.ink);
+        return t;
+      });
+      const print = m.kit.once('m:screenInk', () => new THREE.MeshStandardMaterial({ map, roughness: 1 }));
       for (let i = 0; i < n; i++) {
         const p = new THREE.Group();
         p.position.set(-W / 2 + pw * (i + 0.5), 0, (i % 2 ? 0.08 : -0.08));
         p.rotation.y = i % 2 ? 0.28 : -0.28;
         p.add(box(pw, 1.75, 0.03, m.silver, 0, 0.9, 0));
-        const paper = new THREE.Mesh(new THREE.PlaneGeometry(pw - 0.08, 1.6), m.hanjiPlain);
+        const geo = new THREE.PlaneGeometry(pw - 0.08, 1.6);
+        const uv = geo.attributes.uv as THREE.BufferAttribute;
+        // Use a central landscape crop across the full screen without stretching the square print.
+        const vh = Math.min(1, 1.6 / Math.max(0.1, W - n * 0.08));
+        for (let j = 0; j < uv.count; j++) uv.setXY(j, (i + uv.getX(j)) / n, (1 - vh) / 2 + uv.getY(j) * vh);
+        const paper = new THREE.Mesh(geo, print);
         paper.position.set(0, 0.92, 0.02);
         p.add(paper);
         g.add(p);
@@ -349,10 +485,12 @@ function build(f: Furniture, m: FurnitureMats, lights: LightSpec[], env: Furnish
       roomPiece(f, W, D, g, m, addLight, env);
   }
   g.userData.kind = f.kind;
+  g.userData.assetBounds = { w: W, d: D };
+  g.userData.variantSeed = spotHash(f);
   const cx = (f.x1 + f.x2) / 2;
   const cz = (f.z1 + f.z2) / 2;
   g.position.set(cx, f.level === 2 ? env.floor2 : 0, cz);
-  g.rotation.y = f.face === '+x' ? Math.PI / 2 : f.face === '-x' ? -Math.PI / 2 : f.face === '-z' ? Math.PI : 0;
+  g.rotation.y = f.rot !== undefined ? f.rot : f.face === '+x' ? Math.PI / 2 : f.face === '-x' ? -Math.PI / 2 : f.face === '-z' ? Math.PI : 0;
   return g;
 }
 
@@ -1402,7 +1540,7 @@ function guestDesk({ W, D, g, m, kit }: Piece) {
   g.add(box(W - 0.1, 0.1, 0.02, m.walnut, 0, 0.65, -D / 2 + 0.05));
   g.add(openBook(kit, -W * 0.12, 0.742, 0.03, -0.08));
   g.add(cyl(0.006, 0.006, 0.15, kit.paint('#2f4a6b', 0.4), -W * 0.12 + 0.2, 0.752, 0.06, 6).rotateZ(Math.PI / 2));
-  const card = kit.tex('welcome', 256, 128, (c, w, h) => {
+  const card = kit.words('welcome', 256, 128, (c, w, h, lang) => {
     c.fillStyle = '#fbf6ea';
     c.fillRect(0, 0, w, h);
     c.strokeStyle = '#c98b6b';
@@ -1412,7 +1550,7 @@ function guestDesk({ W, D, g, m, kit }: Piece) {
     c.font = 'bold 40px sans-serif';
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText('어서 오세요', w / 2, h / 2);
+    c.fillText(SIGN_WORDS[lang].welcome, w / 2, h / 2);
   });
   const cardMat = kit.once('m:welcome', () => new THREE.MeshStandardMaterial({ map: card, roughness: 0.95 }));
   const front = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.1), cardMat);
@@ -1552,9 +1690,15 @@ function stool({ W, D, g, m, kit }: Piece) {
 function mergeByMaterial(g: THREE.Group) {
   g.updateMatrixWorld(true);
   const buckets = new Map<string, THREE.Mesh[]>();
+  const keepSeparate = (o: THREE.Object3D): boolean => {
+    for (let cur: THREE.Object3D | null = o; cur && cur !== g; cur = cur.parent) {
+      if (cur.userData?.keepWithModel || cur.userData?.live) return true;
+    }
+    return false;
+  };
   g.traverse((o) => {
     const mesh = o as THREE.Mesh;
-    if (!mesh.isMesh || (mesh as THREE.InstancedMesh).isInstancedMesh || Array.isArray(mesh.material)) return;
+    if (!mesh.isMesh || (mesh as THREE.InstancedMesh).isInstancedMesh || Array.isArray(mesh.material) || keepSeparate(mesh)) return;
     const geo = mesh.geometry;
     const key = `${(mesh.material as THREE.Material).uuid}|${geo.index ? 1 : 0}|${Object.keys(geo.attributes).sort().join(',')}`;
     buckets.set(key, [...(buckets.get(key) ?? []), mesh]);
@@ -1578,6 +1722,8 @@ const PIECES: Partial<Record<Furniture['kind'], (p: Piece) => void>> = {
   targets, paperBasket, kidDesk, bunting, globeLantern, bookWall, corkBoard, drawers9, chalkboard, readingDesk, chair,
   sentenceLine, manuscriptDesk, sheerCurtain, plant, toyChest, blockTower, playTent,
   bed, sideTable, wardrobe, guestDesk, workbench, pegboard, boxShelf, bicycle, stool,
+  weddingStage, flowerArch, aisle, glassRail, photoFrame, flowerStand, guestbook, puppetStage, welcomeSign, planter, hyeonpan, pathLight, sconce,
+  ...ROOM_UPGRADE_PIECES,
 };
 
 /** 방 장면 소품을 그룹에 그린다(모르는 종류는 빈 그룹으로 둔다) */
@@ -1586,4 +1732,327 @@ function roomPiece(f: Furniture, W: number, D: number, g: THREE.Group, m: Furnit
   if (!draw) return;
   draw({ f, W, D, g, m, kit: m.kit, addLight, env });
   mergeByMaterial(g);
+}
+
+// ───────── 행사·마당 소품(staging.ts가 놓는다). 꽃은 작은 공을 한 기하로 묶어 휴대폰에서도 가볍게 그린다.
+/** 당호(造連堂)를 현판 차례로 적은 글: 옛 현판처럼 오른쪽부터 읽으므로 왼쪽에서 오른쪽으로는 거꾸로 쓴다 */
+export const DANGHO_RTL = '堂連造';
+/** 현판·당호 한자 글꼴(시스템 명조, 없으면 기본 세리프) */
+const HANJA_FONT = '"Nanum Myeongjo", "AppleMyungjo", "Batang", "Noto Serif CJK KR", serif';
+/**
+ * 표지판·카드에 적는 말(화면 말을 따른다): 환영 인사, 집 이름, 포토존 이름판의 한 줄. 당호 한자(造連堂)는 어느 말에서나 그대로
+ */
+export const SIGN_WORDS: Readonly<Record<Lang, { welcome: string; name: string; motto: string }>> = {
+  ko: { welcome: '어서 오세요', name: '조연당', motto: '짓고 잇는 집, 조연당' },
+  en: { welcome: 'Welcome', name: 'Joyeondang', motto: 'Joyeondang, a home that builds and connects' },
+};
+const BLOOMS =['#f6d7dc', '#f2b8c2', '#ffffff', '#f7e3c4', '#e99aa6', '#fbefe9'];
+const LEAVES = ['#6f8f5c', '#86a46f', '#5d7d4d'];
+/** 소원 쪽지 종이 색(번갈아) */
+const WISH_PAPER = ['#fbe3e6', '#fff3c9', '#e3f0dc'];
+/** 꼭짓점 색으로 칠하는 재질 하나: 꽃 무더기와 소원 쪽지가 함께 써서 한 번에 그려진다 */
+const bloomMat = (kit: FurnitureKit) => kit.once('m:bloom', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85 }));
+
+/** 꽃송이 한 무더기: 점(중심)마다 작은 공 여러 개를 꼭짓점 색으로 묶은 메시 하나 */
+function bloomCluster(kit: FurnitureKit, pts: Array<[number, number, number]>, seed: number, r = 0.07, per = 5, detail = 1) {
+  const rnd = seeded(seed);
+  const base = new THREE.IcosahedronGeometry(1, detail);
+  const parts: THREE.BufferGeometry[] = [];
+  const c = new THREE.Color();
+  for (const [x, y, z] of pts) {
+    for (let i = 0; i < per; i++) {
+      const g = base.clone();
+      const leaf = i === per - 1;
+      const s = (leaf ? 0.8 : 0.6 + rnd() * 0.6) * r;
+      g.scale(s, leaf ? s * 0.45 : s, s);
+      g.translate(x + (rnd() - 0.5) * r * 2.2, y + (rnd() - 0.5) * r * 1.6, z + (rnd() - 0.5) * r * 2.2);
+      c.set(leaf ? LEAVES[Math.floor(rnd() * LEAVES.length)] : BLOOMS[Math.floor(rnd() * BLOOMS.length)]);
+      const n = g.attributes.position.count;
+      const col = new Float32Array(n * 3);
+      for (let k = 0; k < n; k++) col.set([c.r, c.g, c.b], k * 3);
+      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      parts.push(g.index ? g.toNonIndexed() : g);
+    }
+  }
+  base.dispose();
+  const merged = mergeGeometries(parts, false);
+  parts.forEach((p) => p.dispose());
+  return new THREE.Mesh(merged ?? new THREE.BufferGeometry(), bloomMat(kit));
+}
+
+/** 바닥에 흩어진 꽃잎(납작한 판 여럿을 한 기하로) */
+function petals(kit: FurnitureKit, W: number, D: number, n: number, seed: number, y = 0.016) {
+  const rnd = seeded(seed);
+  const pos: number[] = [], col: number[] = [];
+  const c = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    const x = (rnd() - 0.5) * W, z = (rnd() - 0.5) * D, a = rnd() * Math.PI, s = 0.03 + rnd() * 0.03;
+    const dx = Math.cos(a) * s, dz = Math.sin(a) * s;
+    pos.push(x - dx, y, z - dz, x + dz * 0.6, y, z - dx * 0.6, x + dx, y, z + dz, x - dx, y, z - dz, x + dx, y, z + dz, x - dz * 0.6, y, z + dx * 0.6);
+    c.set(BLOOMS[Math.floor(rnd() * 3)]);
+    for (let k = 0; k < 6; k++) col.push(c.r, c.g, c.b);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geo.computeVertexNormals();
+  return new THREE.Mesh(geo, kit.once('m:petal', () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, side: THREE.DoubleSide })));
+}
+
+function weddingStage({ W, D, g, m, kit, f }: Piece) {
+  // 한 단 높은 오크 무대(걷는 높이는 staging.ts의 STAGING.stageH와 같다), 아이보리 천, 가장자리 놋쇠 띠와 은은한 빛
+  const H = 0.2;
+  g.add(box(W, H, D, m.oakStage, 0, H / 2, 0));
+  g.add(box(W - 0.24, 0.012, D - 0.24, kit.paint('#f4ede0', 0.95), 0, H + 0.006, 0));
+  for (const [w, d, x, z] of [[W, 0.03, 0, D / 2], [W, 0.03, 0, -D / 2], [0.03, D, W / 2, 0], [0.03, D, -W / 2, 0]] as const) {
+    g.add(box(w + 0.01, 0.03, d + 0.01, m.brass, x, H - 0.03, z));
+    g.add(box(w, 0.02, d, kit.glow('#ffe6bf', 0.6), x, 0.03, z));
+  }
+  const p = petals(kit, W - 0.4, D - 0.4, 60, spotHash(f) + 3, H + 0.014);
+  g.add(p);
+}
+
+/**
+ * 아치 기둥 옆에 늘어뜨린 천 한 폭(가운데가 원점, 너비 w·높이 h). 평평한 판 한 장은 모서리가 곧아 유리판처럼 보였다:
+ * 세로 주름을 잡고, 아래에서 1/3 높이를 기둥 쪽(toPost = 판 가운데에서 기둥까지 x 거리)으로 모아 묶은 모양으로 만든다.
+ */
+export function veilGeometry(w: number, h: number, toPost: number): THREE.BufferGeometry {
+  const g = new THREE.PlaneGeometry(w, h, 6, 8);
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), t = p.getY(i) / h + 0.5; // t: 아래 끝 0, 위 끝 1
+    const tie = Math.exp(-(((t - 1 / 3) / 0.14) ** 2)); // 묶은 높이에서 1, 멀어지면 0
+    p.setX(i, toPost + (x - toPost) * (1 - 0.5 * tie));
+    p.setZ(i, 0.03 * Math.sin((x / w + 0.5) * Math.PI * 3) * (1 - 0.5 * tie));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+function flowerArch({ W, g, kit, env, f }: Piece) {
+  // 반원 꽃 아치: 하얀 나무 기둥 둘, 꽃 무더기를 아치 따라, 기둥에 흰 천(천장보다 낮게)
+  const top = Math.min(env.ceilingAt(f) - 0.08, 2.5) - 0.2; // 무대 높이를 뺀다
+  const r = W / 2;
+  const post = Math.max(0.9, top - r - 0.05);
+  const white = kit.paint('#f8f3ea', 0.6);
+  const y0 = 0.2;
+  for (const s of [-1, 1]) g.add(box(0.1, post, 0.1, white, s * r, y0 + post / 2, 0));
+  const arc = new THREE.Mesh(new THREE.TorusGeometry(r, 0.055, 8, 36, Math.PI), white);
+  arc.position.set(0, y0 + post, 0);
+  g.add(arc);
+  const pts: Array<[number, number, number]> = [];
+  for (let i = 0; i <= 14; i++) {
+    const a = (i / 14) * Math.PI;
+    if (i > 3 && i < 11 && i % 2) continue;
+    pts.push([Math.cos(a) * r, y0 + post + Math.sin(a) * r, 0.02]);
+  }
+  for (const s of [-1, 1]) for (const y of [0.25, 0.6]) pts.push([s * r, y0 + y, 0.04]);
+  g.add(bloomCluster(kit, pts, spotHash(f) + 7, 0.075, 6));
+  const veil = kit.once('m:veil', () => noShadow(new THREE.MeshStandardMaterial({ color: '#fffaf2', opacity: 0.8, roughness: 1, side: THREE.DoubleSide, depthWrite: false })));
+  for (const s of [-1, 1]) {
+    const v = new THREE.Mesh(veilGeometry(0.34, post + r * 0.6, s * 0.12), veil);
+    v.position.set(s * (r - 0.12), y0 + (post + r * 0.6) / 2 + 0.02, -0.06);
+    v.rotation.y = s * 0.35;
+    g.add(v);
+  }
+}
+
+function aisle({ W, D, g, kit, f }: Piece) {
+  // 꽃길: 아이보리 러너에 금빛 테두리, 꽃잎 조금
+  const map = kit.tex('aisle', 64, 256, (c, w, h) => {
+    c.fillStyle = '#f5efe4';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#d9b46a';
+    c.fillRect(3, 0, 3, h);
+    c.fillRect(w - 6, 0, 3, h);
+    c.fillStyle = 'rgba(200,170,120,0.18)';
+    for (let y = 0; y < h; y += 16) c.fillRect(10, y, w - 20, 1);
+  });
+  const mat = kit.once('m:aisle', () => new THREE.MeshStandardMaterial({ map, roughness: 1 }));
+  const p = new THREE.Mesh(tiledPlane(W, D, W, 1.0), mat);
+  onFloor(p, 0.014);
+  g.add(p);
+  g.add(petals(kit, W * 0.9, D, Math.round(D * 10), spotHash(f) + 9, 0.02));
+}
+
+function glassRail({ W, D, g, kit }: Piece) {
+  // 유리 난간: 짙은 쇠 기둥, 나무 손잡이, 맑은 유리(마당이 그대로 보이게)
+  const H = 1.0;
+  const metal = kit.paint('#2b2b2e', 0.4, 0.6);
+  const wood = kit.paint('#7a5134', 0.5);
+  const glass = kit.once('m:railGlass', () => noShadow(new THREE.MeshStandardMaterial({ color: '#d7e6ee', opacity: 0.16, roughness: 0.05, depthWrite: false, side: THREE.DoubleSide })));
+  const n = Math.max(1, Math.round(W / 1.2));
+  for (let i = 0; i <= n; i++) g.add(box(0.045, H, 0.045, metal, -W / 2 + (i * W) / n, H / 2, 0));
+  g.add(box(W + 0.04, 0.05, Math.max(0.07, D * 0.6), wood, 0, H + 0.025, 0));
+  const pane = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.06, H - 0.12), glass);
+  pane.position.set(0, (H - 0.12) / 2 + 0.06, 0);
+  g.add(pane);
+}
+
+function photoFrame({ W, D, g, kit }: Piece) {
+  // 포토존: 꽃벽 판 앞에 커다란 나무 액자, 위에 이름판. 정면(+z)에서 찍는다
+  const H = 2.3, fw = W, frame = 0.1;
+  const back = kit.words('photoWall', 512, 512, (c, w, h, lang) => {
+    const grd = c.createLinearGradient(0, 0, 0, h);
+    grd.addColorStop(0, '#f7efe3');
+    grd.addColorStop(1, '#efe0cf');
+    c.fillStyle = grd;
+    c.fillRect(0, 0, w, h);
+    const rnd = seeded(41);
+    for (let i = 0; i < 140; i++) {
+      const x = rnd() * w, y = rnd() * h, r = 8 + rnd() * 20;
+      c.fillStyle = ['#f2b8c2', '#f6d7dc', '#ffffff', '#e99aa6', '#9cb98a', '#f7e3c4'][Math.floor(rnd() * 6)];
+      c.globalAlpha = 0.55 + rnd() * 0.4;
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+    c.fillStyle = 'rgba(255,255,255,0.78)';
+    c.fillRect(w * 0.18, h * 0.06, w * 0.64, h * 0.16);
+    c.fillStyle = '#5a3a24';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    // 당호는 현판처럼 한자를 오른쪽부터 읽게 적는다(堂連造 → 造連堂)
+    c.font = `700 56px ${HANJA_FONT}`;
+    c.lineWidth = 2;
+    c.strokeStyle = '#5a3a24';
+    c.strokeText(DANGHO_RTL, w / 2, h * 0.115);
+    c.fillText(DANGHO_RTL, w / 2, h * 0.115);
+    c.font = '500 26px "Pretendard Variable", "Apple SD Gothic Neo", sans-serif';
+    // 영어 한 줄은 더 길다: 흰 띠 안에 들도록 글씨를 줄인다(한국어는 예전 그대로 26px)
+    const motto = SIGN_WORDS[lang].motto;
+    for (let s = 26; lang === 'en' && s > 12 && c.measureText(motto).width > w * 0.6; ) {
+      c.font = `500 ${(s -= 1)}px "Pretendard Variable", "Apple SD Gothic Neo", sans-serif`;
+    }
+    c.fillText(motto, w / 2, h * 0.18);
+  });
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(fw - 0.1, H - 0.1), kit.once('m:photoWall', () => new THREE.MeshStandardMaterial({ map: back, roughness: 0.95 })));
+  wall.position.set(0, H / 2 + 0.05, -D / 2 + 0.06);
+  g.add(wall);
+  g.add(box(fw, H, 0.05, kit.paint('#efe6d6', 0.9), 0, H / 2 + 0.05, -D / 2 + 0.025));
+  const wood = kit.paint('#8a5a36', 0.55);
+  g.add(box(fw, frame, frame, wood, 0, H + 0.05, -D / 2 + 0.1), box(fw, frame, frame, wood, 0, 0.1, -D / 2 + 0.1));
+  for (const s of [-1, 1]) g.add(box(frame, H, frame, wood, s * (fw / 2 - frame / 2), H / 2 + 0.05, -D / 2 + 0.1));
+  for (const s of [-1, 1]) g.add(box(0.12, 0.08, D, wood, s * (fw / 2 - 0.2), 0.04, 0));
+  // 액자 위 꽃 장식
+  const pts: Array<[number, number, number]> = [];
+  for (let i = 0; i < 9; i++) pts.push([-fw / 2 + 0.15 + (i / 8) * (fw * 0.35), H + 0.1, -D / 2 + 0.14]);
+  for (let i = 0; i < 6; i++) pts.push([fw / 2 - 0.15, H + 0.05 - i * 0.18, -D / 2 + 0.14]);
+  g.add(bloomCluster(kit, pts, 77, 0.08, 6));
+}
+
+function flowerStand({ g, kit, f }: Piece) {
+  // 놋쇠 꽃대: 가는 대 위에 둥근 꽃 무더기
+  const brass = kit.paint('#b08d57', 0.35, 0.8);
+  g.add(cyl(0.14, 0.16, 0.03, brass, 0, 0.015, 0, 20), cyl(0.018, 0.018, 0.95, brass, 0, 0.49, 0, 8), cyl(0.12, 0.06, 0.12, brass, 0, 1.0, 0, 16));
+  const pts: Array<[number, number, number]> = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    pts.push([Math.cos(a) * 0.12, 1.12 + (i % 2) * 0.06, Math.sin(a) * 0.12]);
+  }
+  pts.push([0, 1.22, 0]);
+  g.add(bloomCluster(kit, pts, spotHash(f) + 13, 0.075, 5));
+}
+
+function guestbook({ g, m, kit }: Piece) {
+  // 방명록 받침: 비스듬한 윗판, 펼친 책과 펜
+  g.add(box(0.06, 1.0, 0.06, m.walnut, 0, 0.5, 0), box(0.4, 0.04, 0.3, m.walnut, 0, 0.02, 0));
+  const top = new THREE.Group();
+  top.position.set(0, 1.02, 0);
+  top.rotation.x = -0.35;
+  top.add(box(0.5, 0.03, 0.38, m.walnut, 0, 0, 0));
+  for (const s of [-1, 1]) {
+    const page = box(0.21, 0.012, 0.3, kit.paint('#fbf6ec', 0.95), s * 0.112, 0.022, 0);
+    page.rotation.z = s * -0.06;
+    top.add(page);
+  }
+  top.add(box(0.012, 0.012, 0.16, kit.paint('#3a3a3a', 0.4, 0.4), 0.16, 0.04, 0.02));
+  g.add(top);
+}
+
+function puppetStage({ W, D, g, kit }: Piece) {
+  // 종이 인형극 무대: 작은 나무 틀, 붉은 막, 무대 위 종이 인형 다섯
+  const y0 = 0.2;
+  const wood = kit.paint('#8a5a36', 0.6);
+  g.add(box(W, 0.55, D, wood, 0, y0 + 0.275, 0));
+  for (const s of [-1, 1]) g.add(box(0.06, 0.6, 0.06, wood, s * (W / 2 - 0.03), y0 + 0.85, -D / 2 + 0.05));
+  g.add(box(W, 0.12, 0.06, wood, 0, y0 + 1.16, -D / 2 + 0.05));
+  const curtain = kit.paint('#a5553a', 0.95);
+  for (const s of [-1, 1]) g.add(box(0.14, 0.5, 0.02, curtain, s * (W / 2 - 0.13), y0 + 0.82, -D / 2 + 0.09));
+  const dolls = ['#3e6b4f', '#b4593b', '#c98a5a', '#2f4a6b', '#d98ca0'];
+  dolls.forEach((col, i) => {
+    const x = -W / 2 + 0.17 + (i * (W - 0.34)) / 4;
+    g.add(box(0.07, 0.16, 0.01, kit.paint(col, 0.9), x, y0 + 0.65, 0), sph(0.035, kit.paint('#f6dcc8', 0.9), x, y0 + 0.76, 0, 1, 1, 0.3, 10));
+  });
+}
+
+function welcomeSign({ W, g, kit }: Piece) {
+  // 환영 표지판: 나무 이젤 위 판
+  // 글자는 판을 가득 채울 만큼 크게(휴대폰 화면에서도 읽히게)
+  const board = kit.tex('welcome-art', 1350, 1020, (c, w, h) => {
+    c.fillStyle = '#f4efe4';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#292821';
+    c.textAlign = 'center';
+    c.font = '700 100px sans-serif';
+    c.fillText('조연당 online', w / 2, h / 2);
+  });
+  kit.image(board, '/web/lettering/welcome-storybook-board.webp');
+  const wood = kit.paint('#8a5a36', 0.6);
+  for (const s of [-1, 1]) {
+    const leg = box(0.05, 1.75, 0.05, wood, s * W * 0.32, 0.85, 0.05);
+    leg.rotation.z = s * -0.08;
+    g.add(leg);
+  }
+  g.add(box(0.05, 1.4, 0.05, wood, 0, 0.68, -0.2).rotateX(0.25));
+  const b = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.9, W * 0.68), kit.once('m:welcome-art', () => new THREE.MeshStandardMaterial({ map: board, roughness: 0.9 })));
+  b.position.set(0, 1.1, 0.09);
+  b.rotation.x = -0.08;
+  g.add(b, box(W * 0.92, W * 0.7, 0.02, wood, 0, 1.1, 0.075).rotateX(-0.08));
+}
+
+function planter({ W, D, g, kit, f }: Piece) {
+  // 화분 상자: 나무 상자 위 둥근 꽃 덤불
+  g.add(box(W, 0.42, D, kit.paint('#8a5a36', 0.7), 0, 0.21, 0));
+  const pts: Array<[number, number, number]> = [];
+  for (let i = 0; i < 7; i++) pts.push([(i % 3 - 1) * W * 0.28, 0.5 + (i % 2) * 0.08, (Math.floor(i / 3) - 1) * D * 0.25]);
+  g.add(bloomCluster(kit, pts, spotHash(f) + 21, 0.1, 6));
+}
+
+function hyeonpan({ W, g, kit }: Piece) {
+  // 현판: 나무 테두리 안에 한지 서예와 아호인. 포치 천장 아래에 단다
+  const H = 0.46, y = 2.38;
+  const board = kit.tex('hyeonpan', 1500, 460, (c, w, h) => {
+    c.fillStyle = '#f4efe4';
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = '#292821';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.font = `700 200px ${HANJA_FONT}`;
+    c.fillText(DANGHO_RTL, w / 2, h / 2);
+  });
+  kit.image(board, '/web/lettering/hyeonpan-jisan-board.webp');
+  const mat = kit.once('m:hyeonpan', () => new THREE.MeshStandardMaterial({ map: board, roughness: 0.55 }));
+  g.add(box(W + 0.08, H + 0.08, 0.05, kit.paint('#2e1c11', 0.6), 0, y, 0.0));
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(W, H), mat);
+  face.position.set(0, y, 0.027);
+  g.add(face);
+  for (const s of [-1, 1]) g.add(sph(0.025, kit.paint('#c9a36b', 0.3, 0.7), s * (W / 2 + 0.01), y + H / 2 + 0.01, 0.03, 1, 1, 0.6, 8));
+}
+
+function pathLight({ g, kit }: Piece) {
+  // 길가 등: 낮은 돌 기둥 위 한지 갓(스스로 빛나는 재질만, 점광은 두지 않는다)
+  g.add(box(0.14, 0.42, 0.14, kit.paint('#a39d92', 0.95), 0, 0.21, 0));
+  g.add(box(0.2, 0.18, 0.2, kit.glow('#ffe2b0', 0.9), 0, 0.51, 0));
+  g.add(box(0.24, 0.04, 0.24, kit.paint('#5a3a24', 0.7), 0, 0.62, 0));
+}
+
+function sconce({ g, kit }: Piece) {
+  // 벽등: 놋쇠 받침 위 우윳빛 유리 갓, 따뜻한 빛
+  const y = 2.0;
+  const brass = kit.paint('#b08d57', 0.35, 0.8);
+  g.add(box(0.12, 0.2, 0.03, brass, 0, y, -0.05), box(0.03, 0.03, 0.12, brass, 0, y - 0.04, 0.01));
+  g.add(cyl(0.07, 0.05, 0.18, kit.glow('#ffe2b0', 1.1), 0, y + 0.06, 0.05, 14));
+  g.add(cyl(0.085, 0.085, 0.02, brass, 0, y + 0.16, 0.05, 14));
 }

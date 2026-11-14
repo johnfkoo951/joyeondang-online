@@ -1,0 +1,32 @@
+/* 칭호 칸(캐릭터 꾸미기 패널 맨 위). 색은 사이트 토큰을 쓰고, 미리보기 이름표만 걷기 화면의 이름표와 같은 색으로 */
+.box { display: grid; gap: 8px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 14px; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.title { margin: 0; font-size: 1rem; }
+.count { font-size: 0.82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.count[data-over] { color: var(--roof); font-weight: 800; }
+.help { margin: 0; color: var(--ink-2); }
+.note { margin: 0; min-height: 1.2em; color: var(--ink-2); }
+.note:empty { display: none; }
+
+/* 미리보기: 걷기 화면처럼 밝은 칭호 알약이 어두운 이름표 위에 */
+.preview {
+  display: grid; justify-items: center; gap: 4px; padding: 12px 10px; border-radius: 12px;
+  background: radial-gradient(circle at 50% 30%, var(--season-soft), var(--paper) 75%); border: 1px solid var(--line);
+}
+.badge {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 2px 11px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  color: #2f5a40; background: rgb(255 250 242 / 0.94); border: 1px solid rgb(47 90 64 / 0.5);
+}
+.name {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 3px 13px; border-radius: 999px; font-size: 0.86rem; font-weight: 700; color: #fffaf2; background: rgb(28 24 20 / 0.74);
+}
+
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.input {
+  flex: 1 1 130px; min-width: 0; min-height: 40px; padding: 8px 12px; border-radius: 10px; font: inherit;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+}
+.input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.input[aria-invalid] { border-color: var(--roof); }

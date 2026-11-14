@@ -1,6 +1,10 @@
 // 걷기 화면의 작은 설정값·안내 글·기기 판정. WalkClient가 길어지지 않게 모아 둔다.
 import type { View } from '@/walk/scene';
 import { parseView } from './controls';
+import { SHORTCUTS, type ShortcutId } from './shortcuts';
+
+/** 안내 글에 넣는 키 이름(단축키 표에서 읽는다: 키를 바꾸면 안내도 따라 바뀐다) */
+const K = (id: ShortcutId) => SHORTCUTS[id].key;
 
 export const COARSE = '(pointer: coarse)';
 export const subscribeCoarse = (cb: () => void) => {
@@ -67,22 +71,59 @@ export const HINT_MS = 8000;
 /** 첫 방문 카드: 이만큼 지나면 혼자 접힌다(그 전에 걷거나 둘러보기 시작해도 접힌다) */
 export const ONBOARD_MS = 12000;
 export const ONBOARD_FADE_MS = 320;
-export const ONBOARD_DESK = '마우스를 움직여 둘러보세요 · WASD 걷기 · Space 점프 · E 들어가기·살피기 · P 포털 · C 캐릭터 · F2 사진 · Esc 메뉴';
-export const ONBOARD_TOUCH = '왼쪽으로 걷고 오른쪽으로 둘러봐요 · 가운데 단추로 뛰어요 · 위 「메뉴」에 캐릭터·사진·포털이 있어요';
+/** 첫 방문 카드의 안내(한국어·영어). 「 · 」로 마디를 나눠 보인다(WalkGuide) */
+export const ONBOARD_DESK = {
+  ko: `마우스나 방향키로 둘러보세요 · WASD 걷기 · ${K('jump')} 점프 · ${K('act')} 들어가기·살피기 · ${K('portal')} 포털 · ${K('character')} 캐릭터 · ${K('shot')} 사진 · ${K('menu')} 메뉴`,
+  en: `Look around with the mouse or arrow keys · WASD walk · ${K('jump')} jump · ${K('act')} enter or look closer · ${K('portal')} portal · ${K('character')} character · ${K('shot')} photo · ${K('menu')} menu`,
+} as const;
+/** 휴대폰: 앉기 단추는 두 스틱 사이 아래, 점프 단추 옆 */
+export const ONBOARD_TOUCH = {
+  ko: '왼쪽으로 걷고 오른쪽으로 둘러봐요 · 가운데 단추로 뛰거나 앉아요 · 위 「메뉴」에 캐릭터·사진·포털이 있어요',
+  en: 'Walk with the left circle, look with the right · The middle buttons jump and sit · “Menu” at the top has character, photos and portals',
+} as const;
 
-export const HINT: Array<[string, string]> = [
-  ['마우스', '둘러보기'], ['클릭', '끝없이 둘러보기'], ['W A S D', '걷기'], ['Shift', '달리기'], ['Space', '점프'],
-  ['E', '살피기·들어가기'], ['P', '포털'], ['M', '지도'], ['G', '길 찾기'], ['V', '시점'], ['C', '캐릭터'], ['F2', '사진'],
-  ['Esc', '메뉴'], ['?', '조작'],
+/**
+ * 조작 안내(처음 8초) 한 칸: 키 이름과 뜻(한국어·영어). 키 이름이 낱말이면(마우스·클릭·방향키) 영어 이름(keyEn)도 둔다.
+ * tag: click은 마우스가 잠긴 동안 「Esc 마우스 풀기」로 바뀌는 칸, fullscreen은 전체 화면을 쓸 수 있는 브라우저에서만 보이는 칸
+ */
+export type HintItem = { key: string; keyEn?: string; ko: string; en: string; tag?: 'click' | 'fullscreen' };
+
+export const HINT: readonly HintItem[] = [
+  { key: '마우스', keyEn: 'Mouse', ko: '둘러보기', en: 'Look around' },
+  { key: '클릭', keyEn: 'Click', ko: '끝없이 둘러보기', en: 'Turn freely', tag: 'click' },
+  { key: '방향키', keyEn: 'Arrows', ko: '돌기·위아래 보기', en: 'Turn, look up and down' },
+  { key: 'W A S D', ko: '걷기', en: 'Walk' },
+  { key: K('run'), ko: '달리기', en: 'Run' },
+  { key: K('jump'), ko: '점프', en: 'Jump' },
+  { key: K('sit'), ko: '앉기·일어서기', en: 'Sit or stand' },
+  { key: K('act'), ko: '살피기·들어가기', en: 'Look closer or enter' },
+  { key: K('portal'), ko: '포털', en: 'Portal' },
+  { key: K('map'), ko: '지도', en: 'Map' },
+  { key: K('way'), ko: '길 찾기', en: 'Find the way' },
+  { key: K('view'), ko: '시점', en: 'View' },
+  { key: K('fullscreen'), ko: '전체 화면', en: 'Full screen', tag: 'fullscreen' },
+  { key: K('character'), ko: '캐릭터', en: 'Character' },
+  { key: K('shot'), ko: '사진', en: 'Photo' },
+  { key: K('menu'), ko: '메뉴', en: 'Menu' },
+  { key: K('help'), ko: '조작', en: 'Controls' },
 ];
-export const HINT_TALK: [string, string] = ['Enter', '말하기'];
+/** 마우스가 잠긴 동안 「클릭」 칸 대신 보이는 칸 */
+export const HINT_LOCKED: HintItem = { key: 'Esc', ko: '마우스 풀기', en: 'Release the mouse' };
+export const HINT_TALK: HintItem = { key: K('talk'), ko: '말하기', en: 'Say' };
+/** 초대 손님(함께 걷기)에게만 보이는 안내: 대화창, 접속자 목록 */
+export const HINT_TOGETHER: readonly HintItem[] = [
+  { key: K('chat'), ko: '대화', en: 'Chat' },
+  { key: K('people'), ko: '접속자', en: 'People here' },
+];
 /** 걷기를 시작했다고 보는 키(첫 방문 카드를 접는다) */
 export const MOVE_KEYS = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
 /** 마우스 둘러보기를 멈출 화면 위 단추·카드(걷기 엔진이 이 둘레에서는 돌지 않는다) */
 export const HUD_SEL = [
-  '.walk-place', '.walk-tools', '.walk-mini', '.walk-onboard[data-state="on"]', '.walk-near', '.walk-act', '.walk-hint[data-show]',
-  '.walk-way-banner', '.walk-chat', '.walk-chat-btn', '.walk-people', '.walk-shot-toast',
+  '.walk-place', '.walk-tools', '.walk-mini', '.walk-onboard[data-state="on"]', '.walk-near', '.walk-act', '.walk-act-side', '.walk-hint[data-show]',
+  '.walk-way-banner', '.walk-chat', '.walk-chat-btn', '.walk-chat-quiet', '.walk-people', '.walk-shot-toast', '.walk-social', '.walk-making',
 ].join(', ');
+/** 걷는 화면 위에 떠 있는 단추(패널·대화상자 밖): 마우스·손가락으로 누른 뒤 초점을 놓는다 */
+export const HUD_BTN_SEL = '.walk-tools button, .walk-place, .walk-mini, .walk-act button, .walk-act-side button, .walk-jump, .walk-sit, .walk-chat-btn, .walk-chat-quiet, .walk-near';
 /** 층 배지 옆에서는 이름 앞의 「N층 」을 뺀다(실제 집 구역 이름은 「1층 거실」처럼 층으로 시작한다) */
 export const placeName = (name: string) => name.replace(/^[12]층\s*/, '') || name;
 

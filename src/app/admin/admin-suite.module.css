@@ -1,0 +1,244 @@
+/* 관리자 스위트 공통 네비게이션·KPI·콘솔 스타일 (모두 globals.css 토큰만 사용) */
+
+.navWrap {
+  background: var(--paper-2);
+  border-bottom: 1px solid var(--line-2);
+  padding-block: 10px;
+}
+.navBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+}
+.navBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88em;
+  font-weight: 800;
+  color: var(--pine);
+}
+.navTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.navTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--paper);
+  color: var(--ink-2);
+  font-size: 0.86em;
+  font-weight: 700;
+  text-decoration: none;
+}
+.navTab:hover {
+  border-color: var(--oak);
+  color: var(--ink);
+}
+.navTab[aria-current="page"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+/* 대시보드 숫자 요약 그리드 */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 10px;
+}
+.kpiCard {
+  display: grid;
+  gap: 2px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--ink);
+}
+.kpiCard:hover { border-color: var(--oak); }
+.kpiLabel { font-size: 0.78em; font-weight: 700; color: var(--ink-3); }
+.kpiValue { font-size: 1.5em; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kpiSub { font-size: 0.76em; color: var(--ink-2); }
+.kpiAlert .kpiValue { color: var(--roof); }
+
+/* 관리 도구 카드 그리드 */
+.suiteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.suiteCard {
+  display: grid;
+  align-content: space-between;
+  gap: 10px;
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1px solid var(--line-2);
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.suiteCard:hover {
+  border-color: var(--oak);
+  transform: translateY(-2px);
+}
+.suiteTag {
+  font-size: 0.74em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--pine);
+  text-transform: uppercase;
+}
+.suiteTitle { margin: 2px 0 4px; font-size: 1.12em; font-weight: 800; }
+.suiteDesc { margin: 0; font-size: 0.86em; color: var(--ink-2); line-height: 1.5; }
+.suiteGo { font-size: 0.84em; font-weight: 800; color: var(--roof); }
+
+/* 멤버 콘솔 필터·테이블·편집 행 */
+.toolbar {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+}
+.toolbarTop {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+.searchInput {
+  width: min(100%, 340px);
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 0.9em;
+}
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.filterSelect {
+  width: auto;
+  min-width: 128px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.86em;
+}
+
+.memberList {
+  display: grid;
+  gap: 10px;
+}
+.memberCard {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+}
+.memberCard[data-revoked] {
+  opacity: 0.68;
+  border-style: dashed;
+}
+.memberHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.memberIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+.memberName { font-size: 1.06em; font-weight: 800; }
+.roleBadge {
+  font-size: 0.75em;
+  font-weight: 800;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+}
+.roleBadge[data-role="admin"] {
+  border-color: var(--roof);
+  color: var(--roof);
+}
+.roleBadge[data-role="family"] {
+  border-color: var(--pine);
+  color: var(--pine);
+}
+.statusLinked {
+  font-size: 0.76em;
+  font-weight: 700;
+  color: var(--pine);
+}
+.statusWaiting {
+  font-size: 0.76em;
+  color: var(--ink-3);
+}
+
+.memberMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 0.84em;
+  color: var(--ink-2);
+}
+.editGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.editGrid input, .editGrid select {
+  padding: 8px 10px;
+  font-size: 0.88em;
+}
+.noteSpan { grid-column: 1 / -1; }
+
+.modeSwitch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+}
+.modeBtn {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.86em;
+  font-weight: 700;
+  cursor: pointer;
+}
+.modeBtn[data-active] {
+  background: var(--ink);
+  color: var(--paper);
+}

@@ -2,22 +2,22 @@
 // 1층: 빈티지 우드톤, 코지. 2층: 블랙 앤 실버 + 한국 전통 요소(창살, 한지, 좌식 상, 병풍, 반닫이).
 
 export const EXTERIOR = {
-  wall: '#efe3cc', // 크림 회벽
-  base: '#8f8676', // 벽 밑단 돌
-  roof: '#b4593b', // 테라코타
-  column: '#a39d92', // 화강석 기둥
-  arch: '#f4ecdc', // 회벽 아치
-  trim: '#6e4b33', // 창틀
+  wall: '#f1eee5', // 갤러리의 따뜻한 미색 회벽
+  base: '#aaa391', // 낮은 석재 기단
+  roof: '#985d49', // 채도를 낮춘 테라코타
+  column: '#c3beb0', // 밝은 석회석 기둥
+  arch: '#f5f1e8', // 회벽 아치
+  trim: '#3d3730', // 짙은 브론즈 창틀
   glass: '#3b4a52',
   stone: '#b8b0a2', // 판석·석등
   stoneWall: '#9c9384',
-  pineLeaf: '#2f4a37',
+  pineLeaf: '#586e52',
   pineTrunk: '#6a4a33',
   shrub: '#4f6b45',
-  sky: '#e8e1d3',
+  sky: '#e6f2f5',
 };
 
-export const LAWN_BY_SEASON = { spring: '#86a66c', summer: '#5f8f4f', autumn: '#8d9a5e', winter: '#a9ab9a' } as const;
+export const LAWN_BY_SEASON = { spring: '#86a66c', summer: '#5f8f4f', autumn: '#8d9c7b', winter: '#a9ab9a' } as const;
 
 export const FLOOR1 = {
   oak: ['#9b6b43', '#8a5c38', '#a87a4e'], // 오크 마루 세 톤

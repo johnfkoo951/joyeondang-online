@@ -1,0 +1,156 @@
+/* 사진 캐릭터를 그리는 중(2D)과 3D를 만드는 중: 메인 화면의 작은 칩과 알림·확인 카드, 캐릭터 창 안의 진행 상자. 색은 사이트 토큰만 */
+
+/* ───────── 칩과 카드를 세로로 쌓는 자리(창을 닫아도 남는다): 데스크탑·휴대폰 모두 위 단추 줄 아래 왼쪽.
+   자리 자체는 누르기를 받지 않는다(빈 곳으로 둘러보기가 그대로 된다). 칩과 카드만 받는다.
+   높이는 위 단추 줄 아래에서 화면 아래(--dock-room)까지로 막고, 넘치면 이 안에서 스크롤한다(카드가 화면 밖으로 나가거나
+   스틱을 덮지 않게). 그림자가 잘리지 않게 안쪽 여백(--dock-pad)을 두고 그만큼 바깥으로 옮긴다 */
+.dock {
+  --dock-top: calc(var(--walk-bar, calc(var(--walk-top) + 44px)) + 10px);
+  --dock-room: calc(var(--walk-bottom) + 8px);
+  --dock-pad: 12px;
+  position: absolute; left: calc(var(--walk-left) - var(--dock-pad)); top: calc(var(--dock-top) - 4px); z-index: 3;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+  width: calc(min(100% - var(--walk-left) - var(--walk-right), 380px) + 2 * var(--dock-pad));
+  max-height: max(140px, calc(100% - var(--dock-top) - var(--dock-room) + 4px));
+  padding: 4px var(--dock-pad) 18px; box-sizing: border-box;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; pointer-events: none;
+}
+.dock > * { pointer-events: auto; max-width: 100%; flex: none; }
+/* 손가락 기기: 아래 두 스틱(높이 120px, 바닥에서 6px) 자리 위에서 끝난다(카드가 떠 있어도 걷고 둘러볼 수 있게) */
+:global(.walk-root[data-coarse]) .dock { --dock-room: calc(var(--walk-bottom) + 134px); }
+/* 휴대폰에서 같은 자리를 쓰는 「○○로 가는 중」 띠와 첫 방문 카드가 떠 있으면 그 아래로 */
+:global(.walk-root[data-coarse]:has(.walk-way-banner, .walk-onboard[data-state="on"])) .dock {
+  --dock-top: calc(var(--walk-bar, calc(var(--walk-top) + 44px)) + 72px);
+}
+.chip {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 5px 14px 7px 6px; border-radius: 999px; overflow: hidden;
+  font: inherit; font-size: 0.9rem; font-weight: 800; color: var(--ink); cursor: pointer;
+  background: var(--walk-surface); border: 1px solid var(--walk-edge); box-shadow: var(--walk-shadow); backdrop-filter: blur(10px);
+}
+.chip:hover { background: var(--paper); border-color: var(--line-2); }
+.chip:focus-visible, .card button:focus-visible, .pick button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.chipIcon {
+  flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+  background: var(--pine); color: var(--pine-on);
+}
+/* 3D 칩은 붓 대신 상자, 지붕색 동그라미(2D 칩과 나란히 떠도 헷갈리지 않게) */
+.chip[data-kind="3d"] .chipIcon { background: var(--roof); color: var(--roof-on); }
+/* 좁으면(휴대폰) 걸린 시간이 둘째 줄로 내려간다 */
+.chipText { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; line-height: 1.3; text-align: left; }
+.chipText > span { white-space: nowrap; }
+.chipTime { font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 700; }
+/* 휴대폰: 오른쪽 미니맵(120px) 자리는 비운다(그리는 동안 몇 분씩 떠 있다). 확인 카드만은 고르는 동안 잠깐이라 폭을 다 쓴다 */
+:global(.walk-root[data-coarse]) .dock { width: calc(100% - var(--walk-left) - var(--walk-right) - 132px + 2 * var(--dock-pad)); }
+:global(.walk-root[data-coarse]) .dock:has(.pick) { width: calc(100% - var(--walk-left) - var(--walk-right) + 2 * var(--dock-pad)); }
+/* 3D의 끝을 접은 칩(확인 카드가 떠 있을 때): 못 만들었으면 테두리로 알린다 */
+.chip[data-tone="fail"] { border-color: var(--roof); }
+/* 칩 아래 가는 진행 막대 */
+.chipBar { position: absolute; left: 44px; right: 14px; bottom: 3px; height: 3px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.chipBar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--roof); transition: width 0.6s ease; }
+
+/* ───────── 알림 카드(못 그림, 3D 다 됨·못 만듦) */
+.card {
+  display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; width: min(100%, 340px);
+  padding: 10px 12px; border-radius: 16px; background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.22);
+}
+.card[data-tone="fail"] { border-color: var(--roof); }
+.card p { margin: 0; }
+.thumb {
+  grid-row: span 2; width: 46px; height: 69px; object-fit: contain; border-radius: 10px;
+  background: radial-gradient(circle at 50% 38%, var(--season-soft), var(--paper-2) 75%); border: 1px solid var(--line);
+}
+.failMark {
+  grid-row: span 2; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
+  background: color-mix(in srgb, var(--roof) 16%, var(--paper)); color: var(--roof); font-weight: 900; font-size: 1.3rem;
+}
+.cardTitle { font-weight: 800; }
+.cardLine { font-size: 0.86rem; color: var(--ink-2); line-height: 1.45; }
+.cardBtns { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-top: 4px; }
+
+/* ───────── 2D를 다 그린 뒤의 확인 카드(PickCard): 새 그림을 크게, 오른쪽에 제목과 한 줄, 아래에 3D 셈과 단추 */
+.pick {
+  display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px 12px; align-items: start;
+  padding: 12px; border-radius: 18px; background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+}
+.pick[data-where="walk"] { width: min(100%, 380px); box-shadow: 0 12px 32px rgb(0 0 0 / 0.24); }
+.pick[data-where="panel"] { border: 2px solid var(--roof); background: var(--paper-2); }
+.pick p { margin: 0; }
+.pickImg {
+  grid-row: span 2; width: 112px; aspect-ratio: 2 / 3; height: auto; object-fit: contain; border-radius: 12px;
+  background: radial-gradient(circle at 50% 38%, var(--season-soft), var(--paper-2) 75%); border: 1px solid var(--line);
+}
+.pickHead { display: grid; gap: 4px; min-width: 0; }
+.pickTitle { font-weight: 800; font-size: 1.02rem; }
+.pickLine { font-size: 0.86rem; color: var(--ink-2); line-height: 1.45; }
+.pickBody { display: grid; gap: 8px; min-width: 0; }
+/* 남은 3D 수와 다시 해 볼 수 있는지(실제 셈대로) */
+.pickChance { font-size: 0.86rem; font-weight: 800; line-height: 1.45; }
+.pickConfirm { font-size: 0.86rem; font-weight: 700; line-height: 1.5; }
+.pickAsk { display: grid; gap: 8px; min-width: 0; }
+.pickAsk:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 8px; }
+/* 단추는 위아래로(긴 단추 글이 잘리지 않게) */
+.pickBtns { display: grid; gap: 6px; }
+.pickBtns :global(.btn) { width: 100%; justify-content: center; text-align: center; white-space: normal; }
+/* 걷기 화면의 확인 카드는 자리(dock) 안에서 스크롤할 수 있다: 긴 확인 글을 읽는 동안에도 「보내기」「그만두기」가 자리 아래에 붙어
+   늘 보인다(카드 배경으로 뒤 글을 가린다) */
+.pick[data-where="walk"] .pickBtns {
+  position: sticky; bottom: 0; z-index: 1; margin: 0 -2px; padding: 6px 2px 2px;
+  background: var(--paper); border-radius: 0 0 10px 10px;
+}
+/* 좁은 확인 카드(휴대폰 세로, 좁은 창): 그림을 조금 줄인다 */
+@media (max-width: 420px) {
+  .pick { grid-template-columns: 92px minmax(0, 1fr); gap: 8px 10px; padding: 10px; }
+  .pickImg { width: 92px; }
+}
+/* 3D를 고른 뒤(무엇을 어디로 보내는지 묻기, 보관함 안내): 그림은 작게, 읽을 글에 폭을 준다 */
+.pick[data-step="ask"] { grid-template-columns: 64px minmax(0, 1fr); }
+.pick[data-step="ask"] .pickImg { width: 64px; border-radius: 10px; }
+/* 낮은 화면(휴대폰 가로): 걷기 화면의 확인 카드는 그림을 작게, 단추를 나란히, 고르지 않아도 된다는 한 줄은 뺀다.
+   3D 확인(긴 글)은 이 화면에서 묻지 않고 캐릭터 창에서 묻는다(PickCard) */
+@media (max-height: 500px) {
+  .pick[data-where="walk"] { grid-template-columns: 64px minmax(0, 1fr); gap: 6px 10px; padding: 10px; }
+  .pick[data-where="walk"] .pickImg { width: 64px; border-radius: 10px; }
+  .pick[data-where="walk"] .pickLead { display: none; }
+  .pick[data-where="walk"] .pickBtns { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chip, .card, .pick[data-where="walk"] { animation: making-in 0.24s ease-out; }
+  .chipIcon svg { animation: making-brush 1.6s ease-in-out infinite; transform-origin: 50% 80%; }
+  .chip[data-kind="3d"] .chipIcon svg { animation: making-turn 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
+  .chip[data-done] .chipIcon svg { animation: none; }
+}
+@keyframes making-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@keyframes making-brush { 0%, 100% { transform: rotate(-12deg); } 50% { transform: rotate(14deg); } }
+@keyframes making-turn { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.72); } }
+
+/* ───────── 캐릭터 창 안의 진행 상자 */
+.progress {
+  display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px;
+  background: var(--season-soft); border: 1px solid var(--line);
+}
+.progress[data-tone="fail"] { background: color-mix(in srgb, var(--roof) 10%, var(--paper)); border-color: var(--roof); }
+.progressHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+.progressTitle { font-weight: 800; }
+.progressTime { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--ink-2); }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 0.78rem; }
+.step { display: grid; gap: 4px; color: var(--ink-2); min-width: 0; }
+.step::before { content: ''; height: 4px; border-radius: 999px; background: var(--line-2); }
+.step[data-state="done"]::before { background: var(--pine); }
+.step[data-state="now"]::before { background: var(--roof); }
+.step[data-state="now"] { color: var(--ink); font-weight: 800; }
+.step[data-state="fail"]::before { background: var(--warn); }
+.step[data-state="fail"] { color: var(--warn); font-weight: 800; }
+.bar { position: relative; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.bar span { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--roof); transition: width 0.6s ease; }
+.stage { margin: 0; font-weight: 700; }
+.stageNote { margin: 0; font-size: 0.86rem; color: var(--ink-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar span, .chipBar span { transition: none; }
+}
+@media (pointer: coarse) {
+  .chip { min-height: 44px; }
+  .cardBtns :global(.btn), .pickBtns :global(.btn) { min-height: 44px; }
+}

@@ -67,6 +67,28 @@
   border-radius: 3px;
   background: linear-gradient(var(--frame) 0 0) 0 50% / 100% 3px no-repeat;
 }
+/* 목표 별 세 개: 소품을 올릴 때마다 하나씩 노랗게 찬다 */
+.goal {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+.goal svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.goal svg[data-on] {
+  fill: var(--lamp);
+  stroke: color-mix(in srgb, var(--lamp) 60%, var(--ink));
+}
+.tool[data-armed] {
+  border-color: var(--roof);
+  color: var(--roof);
+}
 .tools {
   display: flex;
   flex-wrap: wrap;
@@ -109,6 +131,30 @@
 }
 .primary[aria-disabled='true'] {
   opacity: 0.55;
+}
+/* 별 세 개가 다 차면 「다 꾸몄어요」가 두근거린다(움직임 줄이기면 빛 테두리만) */
+.primary[data-ready] {
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lamp) 70%, transparent);
+  animation: shelf-ready 1.4s ease-in-out infinite;
+}
+.root[data-reduced] .primary[data-ready] {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .primary[data-ready] {
+    animation: none;
+  }
+}
+@keyframes shelf-ready {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--lamp) 70%, transparent);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 9px color-mix(in srgb, var(--lamp) 35%, transparent);
+  }
 }
 @media (hover: hover) {
   .tool:not(:disabled):hover,

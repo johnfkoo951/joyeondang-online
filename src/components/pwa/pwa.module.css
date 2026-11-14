@@ -1,0 +1,28 @@
+/* 홈 화면 앱 안내 창과 앱 로그인 화면 */
+.body { display: grid; gap: 14px; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.head h2 { margin: 0; font-size: 1.15rem; }
+.close {
+  border: 1px solid var(--line-2); border-radius: 999px; background: var(--paper-2); color: var(--ink);
+  width: 34px; height: 34px; font: inherit; font-size: 1.1rem; line-height: 1; cursor: pointer;
+}
+.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 10px; }
+.steps li { line-height: 1.55; }
+.icon {
+  display: inline-flex; vertical-align: -4px; align-items: center; justify-content: center;
+  width: 26px; height: 26px; margin: 0 2px; border: 1px solid var(--line-2); border-radius: 7px; background: var(--paper-2);
+}
+.note { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--paper-2); font-size: 0.92rem; line-height: 1.55; }
+
+/* 앱 로그인 코드: 크게, 세 자씩 */
+.code {
+  margin: 0; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: clamp(2.2rem, 11vw, 3.2rem);
+  letter-spacing: 0.12em; font-weight: 700; color: var(--ink); text-align: center;
+  padding: 14px 8px; border: 1.5px dashed var(--oak); border-radius: 14px; background: var(--paper-2);
+}
+.timer { margin: 0; text-align: center; font-variant-numeric: tabular-nums; }
+.codeInput {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 1.6rem; letter-spacing: 0.18em;
+  text-transform: uppercase; text-align: center; padding: 10px 12px; width: 100%; max-width: 280px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

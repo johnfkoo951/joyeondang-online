@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import { T } from '@/components/i18n/T';
 import type { Shot } from '@/lib/shots';
 
 type Props = {
@@ -44,15 +45,19 @@ export function ShotViewer({ shot, url, title, onDownload, onDelete, onClose, on
           // eslint-disable-next-line @next/next/no-img-element -- 서명 주소라 이미지 최적화를 거치지 않는다
           <img src={url} alt={title} width={shot.w} height={shot.h} />
         ) : (
-          <p className="muted">사진을 불러오는 중이에요</p>
+          <p className="muted"><T ko="사진을 불러오는 중이에요" en="Loading the photo" /></p>
         )}
         <p className="small muted">{title}{position ? ` · ${position}` : ''}</p>
         <div className="btn-row">
-          <button type="button" className="btn btn-small" onClick={() => onPrev?.()} aria-disabled={!onPrev} aria-keyshortcuts="ArrowLeft">← 앞 사진</button>
-          <button type="button" className="btn btn-small" onClick={() => onNext?.()} aria-disabled={!onNext} aria-keyshortcuts="ArrowRight">다음 사진 →</button>
-          <button type="button" className="btn btn-roof btn-small" onClick={onDownload}>내려받기</button>
-          <button type="button" className="btn btn-small" onClick={onDelete}>지우기</button>
-          <button type="button" className="btn btn-small" onClick={onClose} autoFocus>닫기</button>
+          <button type="button" className="btn btn-small" onClick={() => onPrev?.()} aria-disabled={!onPrev} aria-keyshortcuts="ArrowLeft">
+            <T ko="← 앞 사진" en="← Previous" />
+          </button>
+          <button type="button" className="btn btn-small" onClick={() => onNext?.()} aria-disabled={!onNext} aria-keyshortcuts="ArrowRight">
+            <T ko="다음 사진 →" en="Next →" />
+          </button>
+          <button type="button" className="btn btn-roof btn-small" onClick={onDownload}><T ko="내려받기" en="Download" /></button>
+          <button type="button" className="btn btn-small" onClick={onDelete}><T ko="지우기" en="Delete" /></button>
+          <button type="button" className="btn btn-small" onClick={onClose} autoFocus><T ko="닫기" en="Close" /></button>
         </div>
       </div>
     </dialog>

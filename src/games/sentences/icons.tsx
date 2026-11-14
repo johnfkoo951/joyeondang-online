@@ -81,3 +81,31 @@ export function CheckIcon({ size = 22 }: P) {
     </svg>
   );
 }
+
+/** 문으로 나가기(그만하기) */
+export function DoorIcon({ size = 22 }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="M28 8H12v32h16M20 24h20M34 18l6 6-6 6" />
+    </svg>
+  );
+}
+
+/** 다음(▶) */
+export function NextIcon({ size = 22 }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="M16 10v28l22-14z" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** 다시(↻) */
+export function AgainIcon({ size = 22 }: P) {
+  return (
+    <svg {...base(size)}>
+      <path d="M39 24a15 15 0 1 1-4.4-10.6" />
+      <path d="M39 8v9h-9" />
+    </svg>
+  );
+}

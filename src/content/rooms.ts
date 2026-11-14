@@ -21,6 +21,8 @@ export type Room = {
   game?: string;
   /** 이 방과 이어지는 전시 칸 slug */
   exhibit?: string[];
+  /** 쪽지에 사진 한 장을 붙일 수 있는 방(최종 판정은 DB rooms.accepts_photos) */
+  photo?: boolean;
 };
 
 export const FLOORS: { id: Floor; label: string; note?: string }[] = [
@@ -49,6 +51,16 @@ export const ROOMS: Room[] = [
     question: '다음에 이 집에서 우리와 무엇을 함께하고 싶나요?',
     door: 'open',
     exhibit: ['messages'],
+    photo: true,
+  },
+  {
+    slug: 'photozone',
+    floor: 'yard',
+    name: '포토존',
+    line: '여기서 사진 한 장 찍어 남겨 주세요. 올린 사진은 먼저 가족에게만 보여요.',
+    question: '오늘 이 집에서 찍은 사진 한 장',
+    door: 'open',
+    photo: true,
   },
   {
     slug: 'lantern',
@@ -85,8 +97,8 @@ export const ROOMS: Room[] = [
   {
     slug: 'study',
     floor: 'first',
-    name: '빛이 드는 방',
-    line: '큰 창으로 드는 빛 무늬 아래, 요즘 만난 좋은 문장을 줄에 걸어 두는 방이에요.',
+    name: '글과 빛이 드는 곳',
+    line: '한지 벽에 창 하나로 빛줄기가 비스듬히 들고, 시집과 벼루 놓인 서안이 놀이의 입구가 되는 방이에요.',
     door: 'open',
     game: '문장 걸어 두기',
     exhibit: ['works'],
@@ -104,9 +116,9 @@ export const ROOMS: Room[] = [
     slug: 'gable',
     floor: 'second',
     name: '재즈가 흐르는 방',
-    line: '경사진 천장 아래 레코드가 돌고, 피아노와 콘트라베이스가 함께 칠 사람을 기다려요.',
+    line: '경사진 천장 아래 스윙 잼·리듬 천국 스튜디오·재즈 이어 트레이닝 세 가지 음악 놀이와 리더보드가 펼쳐져요.',
     door: 'open',
-    game: '박공 아래 잼',
+    game: '리듬 천국 재즈 스튜디오',
     exhibit: ['again'],
   },
   {
@@ -129,7 +141,7 @@ export const ROOMS: Room[] = [
     slug: 'mind',
     floor: 'second',
     name: '생각 지도 방',
-    line: '벽 가득 책과 실로 이은 카드, 아홉 칸 서랍이 있는 서재예요.',
+    line: '지식관리 일러스트 갤러리와 지산 에세이 책상, 메인 볼트 강의 자산 보드가 이어진 지식의 우주예요.',
     door: 'open',
     game: '생각 지도 퀴즈',
   },
@@ -144,7 +156,7 @@ export const ROOMS: Room[] = [
     slug: 'garage',
     floor: 'second',
     name: '작업 차고',
-    line: '작업대와 공구 벽, 상자 선반과 자전거가 가지런한 만드는 사람의 차고예요.',
+    line: '스타링크를 얹은 그레나디어와 AMG 쿠페, 티구안 구매 계획 도면과 AI 하네스 장비 본부가 자리한 개러지예요.',
     door: 'open',
   },
   {
@@ -173,6 +185,19 @@ export const DOOR_LABEL: Record<Door, string> = {
   family: '가족만',
   closed: '늘 닫힘',
 };
+
+/** 문패 상태의 영어(화면이 영어일 때). 방 이름은 lib/place-names, 방 안내 문장은 lib/house-lines가 옮긴다 */
+export const DOOR_LABEL_EN: Record<Door, string> = {
+  open: 'Open',
+  resting: 'On a break',
+  family: 'Family only',
+  closed: 'Always closed',
+};
+
+/** 지금 언어의 문패 상태 */
+export function doorLabel(lang: 'ko' | 'en', door: Door): string {
+  return lang === 'en' ? DOOR_LABEL_EN[door] : DOOR_LABEL[door];
+}
 
 /** 쪽지를 받을 수 있는 방인가(문패가 열림이고 질문이 있는 방) */
 export function acceptsNotes(room: Room, door: Door = room.door): boolean {

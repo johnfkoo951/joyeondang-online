@@ -34,6 +34,13 @@ include `portal`, `exit` and `game`.
 **Characters** (`src/walk/look.ts`). `CharacterLook` is either a doll (`hair`, `hairColor`, `skin`, `top`,
 `bottom`, `acc` from fixed palettes) or a photo character URL. Always pass input through `cleanLook`.
 
+**Pet** (`src/walk/pet.ts`, `src/walk/pet-view.ts`). An optional animal that wanders between the house and
+the yard. Its schedule is a pure function of the clock (45 s slots, a fixed seed, nav destinations plus lawn
+spots, `findPath` legs), so every screen with the same world shows it in the same place without a server.
+Model paths and the name come from the server-only `PET_JSON` (`{name, walk, rest}`) through `/api/pet`; the
+name is sent to invited guests only. Without it there is no pet. Model files: +Y up, +Z front, lowest point
+at y = 0, sized so that a person is 1.0 tall (the engine scales by the photo-model height).
+
 **Walking together** (`game-server/src/protocol.ts`). A small JSON protocol over one WebSocket per guest.
 States are batched every 100 ms; up to 60 guests per space, one chat line per 1.5 s, short bubbles.
 The site signs a 10-minute HMAC token so the game server never talks to the database.
@@ -55,6 +62,7 @@ and on the built pages.
 - **놀이 카트리지** (`src/games/types.ts`): 기본 내보내기는 `MountGame = (container, ctx) => cleanup`. 필요한 것은 모두 `ctx`로 받고, 닫을 때 `ctx.onExit(result)`. 정리 함수는 이벤트·애니메이션·소리·WebGL을 모두 놓아요. `src/games/registry.ts`에 `id`, `title`, `room`, `blurb`, `seconds`, `load`로 등록해요. 도장은 `cleared`일 때만, 쪽지는 놀이로 잠그지 않아요.
 - **집과 방** (`src/walk/types.ts`): 걸을 수 있는 모든 것은 `HouseWorld`(`kind`: `redrawn`, `real`, `room`) 데이터예요. 방 장면(`src/content/room-worlds.ts`)은 따로 지은 작은 세계이고, 나오면 그 방 문 앞이에요.
 - **캐릭터** (`src/walk/look.ts`): 정해진 팔레트의 인형이거나 사진 캐릭터 주소. 입력은 늘 `cleanLook`을 거쳐요.
+- **반려동물** (`src/walk/pet.ts`, `src/walk/pet-view.ts`): 집과 마당을 오가는 동물(있어도 없어도 된다). 일정은 시각만으로 정해요(45초 칸, 고정 씨앗, 길 찾기 목록과 잔디 위 자리, `findPath`). 그래서 서버 없이도 같은 세계를 보는 화면은 모두 같은 자리를 봐요. 모형 경로와 이름은 서버 전용 `PET_JSON`(`{name, walk, rest}`)을 `/api/pet`이 주고, 이름은 초대 손님에게만 가요. 모형 파일은 +Y 위, +Z 정면, 맨 아래 y = 0, 사람 키를 1로 한 크기예요.
 - **함께 걷기** (`game-server/src/protocol.ts`): 손님마다 웹소켓 하나, 상태는 100ms마다 묶어 보내고, 공간 하나에 60명, 채팅은 1.5초에 한 줄.
 - **개인정보**: 실제 집, 가족 이름, 키는 번들에 들어가지 않아요. 서버 전용 환경 변수에만 있고 초대 손님에게만 가요. `npm run verify`가 소스와 빌드 결과를 검사해요.
 
